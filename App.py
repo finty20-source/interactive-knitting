@@ -219,27 +219,50 @@ with tab1:
     shoulder_len_cm   = st.number_input("Длина одного плеча (см)", 5, 30, 12, key="sl1")
     shoulder_slope_cm = st.number_input("Высота скоса плеча (см)", 1, 20, 4, key="ss1")
 
-    if st.button("🔄 Рассчитать перед"):
-        # Пересчёты
-        st_chest     = cm_to_st(chest_cm, density_st)
-        st_hip       = cm_to_st(hip_cm,   density_st)
-        st_shoulders = cm_to_st(shoulders_width_cm, density_st)
+ if st.button("🔄 Рассчитать перед"):
+    # Пересчёты
+    st_chest     = cm_to_st(chest_cm, density_st)
+    st_hip       = cm_to_st(hip_cm,   density_st)
+    st_shoulders = cm_to_st(shoulders_width_cm, density_st)
 
-        rows_total   = cm_to_rows(length_cm, density_row)
-        rows_armhole = cm_to_rows(armhole_depth_cm, density_row)
+    rows_total   = cm_to_rows(length_cm, density_row)
+    rows_armhole = cm_to_rows(armhole_depth_cm, density_row)
 
-        neck_st      = cm_to_st(neck_width_cm, density_st)
-        neck_rows    = cm_to_rows(neck_depth_cm, density_row)
+    neck_st      = cm_to_st(neck_width_cm, density_st)
+    neck_rows    = cm_to_rows(neck_depth_cm, density_row)
 
-        st_shoulder  = cm_to_st(shoulder_len_cm, density_st)
-        rows_sh_slope= cm_to_rows(shoulder_slope_cm, density_row)
+    st_shoulder  = cm_to_st(shoulder_len_cm, density_st)
+    rows_sh_slope= cm_to_rows(shoulder_slope_cm, density_row)
 
-        # Ключевые границы по рядам
-        rows_to_armhole_end = rows_total - rows_armhole
-        shoulder_start_row  = rows_total - rows_sh_slope + 1
-        neck_start_row      = rows_total - neck_rows + 1
-        armhole_start_row   = rows_to_armhole_end + 1
-        armhole_end_row     = min(rows_total, shoulder_start_row - 1)
+    # Ключевые границы по рядам
+    rows_to_armhole_end = rows_total - rows_armhole
+    shoulder_start_row  = rows_total - rows_sh_slope + 1
+    neck_start_row      = rows_total - neck_rows + 1
+    armhole_start_row   = rows_to_armhole_end + 1
+    armhole_end_row     = rows_total   # ⚡️ теперь до самого верха, не обрезаем горловиной
+
+    actions = []
+
+    # 1) Низ → грудь (оверсайз: растём кверху)
+    delta_bottom = st_chest - st_hip
+    if delta_bottom > 0:
+        actions += sym_increases(delta_bottom, 6, rows_to_armhole_end, rows_total, "бок")
+
+    # 2) Пройма (от груди до ширины по плечам)
+    delta_armhole = st_shoulders - st_chest
+    if delta_armhole > 0 and armhole_start_row <= armhole_end_row:
+        actions += sym_increases(delta_armhole, armhole_start_row, armhole_end_row, rows_total, "пройма")
+
+    # 3) Горловина
+    actions += calc_round_neckline(neck_st, neck_rows, neck_start_row, rows_total, straight_percent=0.05)
+
+    # 4) Скос плеча
+    actions += slope_shoulder(st_shoulder, shoulder_start_row, rows_total, rows_total)
+
+    st.subheader("📋 Единый план — ПЕРЕД")
+    make_table(actions, rows_total,
+               rows_to_armhole_end, armhole_start_row, armhole_end_row,
+               neck_start_row, shoulder_start_row)
 
         # 1) Низ → грудь (оверсайз: растём кверху)
         delta_bottom = st_chest - st_hip
