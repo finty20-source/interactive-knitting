@@ -14,31 +14,52 @@ def cm_to_st(cm, dens_st):
 def cm_to_rows(cm, dens_row):
     return int(round((cm/10.0)*dens_row))
 
-def spread_rows(start_row: int, end_row: int, count: int):
-    """Равномерное распределение по рядам (не раньше 5-го ряда)."""
-    if count <= 0 or end_row < start_row:
-        return []
-    start_row = max(5, start_row)
-    if start_row == end_row:
-        return [start_row]*count
-    xs = np.linspace(start_row, end_row, num=count, endpoint=True)
-    rows = sorted(set(int(round(x)) for x in xs))
-    while len(rows) < count and rows[-1] < end_row:
-        rows.append(rows[-1]+1)
-    return rows[:count]
+def to_even(row: int) -> int:
+    """Сдвигаем номер ряда до чётного, минимум 6-го."""
+    row = max(6, row)
+    if row % 2 == 1:
+        row += 1
+    return row
 
-def distribute_side_increases(start_row, end_row, total_delta, label):
-    """Прибавки симметричные → пара в одном ряду."""
-    if total_delta <= 0 or end_row < start_row:
-        return []
-    if total_delta % 2 == 1:
-        total_delta += 1  # всегда чётное
-    pairs = total_delta // 2
-    rows = spread_rows(start_row, end_row, pairs)
-    return [(r, f"+1 п. {label} слева и +1 п. {label} справа") for r in rows]
+def distribute_steps(total_change, steps, start_row, end_row, label, action_type="±"):
+    """
+    Распределяет прибавки/убавки по шагам.
+    Если рядов мало → увеличиваем размер шага.
+    """
+    results = []
+    if total_change == 0 or steps <= 0:
+        return results
 
-def calc_round_neckline(total_stitches, total_rows, start_row):
-    """Горловина: первые 60% закрываются сразу, потом по плечам отдельно."""
+    # максимум доступных чётных рядов
+    safe_end = max(6, end_row - 2)
+    rows_available = list(range(to_even(start_row), safe_end + 1, 2))
+    max_steps = len(rows_available)
+
+    if max_steps == 0:
+        return results
+
+    # если шагов больше чем доступно → сжимаем
+    steps = min(steps, max_steps)
+
+    # делим изменение на шаги
+    base = total_change // steps
+    rem = total_change % steps
+    parts = [base + (1 if i < rem else 0) for i in range(steps)]
+
+    # выбираем ряды равномерно
+    chosen_rows = np.linspace(0, max_steps - 1, num=steps, dtype=int)
+    rows = [rows_available[i] for i in chosen_rows]
+
+    for r, val in zip(rows, parts):
+        if val > 0:
+            if action_type == "+":
+                results.append((r, f"+{val} п. {label} слева и +{val} п. {label} справа"))
+            elif action_type == "-":
+                results.append((r, f"-{val} п. {label} (каждое плечо отдельно)" if "плечо" in label else f"-{val} п. {label}"))
+    return results
+
+def calc_round_neckline(total_stitches, total_rows, start_row, rows_total):
+    """Горловина: распределение по процентам, укрупняем шаги если мало рядов."""
     if total_stitches <= 0 or total_rows <= 0:
         return []
     percentages = [60, 20, 10, 5, 5]
@@ -46,30 +67,29 @@ def calc_round_neckline(total_stitches, total_rows, start_row):
     diff = total_stitches - sum(parts)
     if diff != 0:
         parts[0] += diff
-    actions = []
-    row = max(5, start_row)
-    # первые 60% — одним приёмом
-    if parts[0] > 0:
-        actions.append((row, f"-{parts[0]} п. горловина (середина, разделение на плечи)"))
-    row += 2
-    # остальные проценты → только по одному плечу
-    for dec in parts[1:]:
-        if dec > 0 and row <= start_row + total_rows - 1:
-            actions.append((row, f"-{dec} п. горловина (каждое плечо отдельно)"))
-        row += 2
-    return actions
+
+    safe_end = rows_total - 2
+    start_row = to_even(start_row)
+    rows_available = list(range(start_row, safe_end + 1, 2))
+    max_steps = len(rows_available)
+
+    steps = min(len(parts), max_steps)
+    parts = parts[:steps]  # если рядов меньше → урезаем шаги
+    chosen_rows = np.linspace(0, max_steps - 1, num=steps, dtype=int)
+    rows = [rows_available[i] for i in chosen_rows]
+
+    results = []
+    for i, (r, dec) in enumerate(zip(rows, parts)):
+        if dec > 0:
+            if i == 0:
+                results.append((r, f"-{dec} п. горловина (середина, разделение на плечи)"))
+            else:
+                results.append((r, f"-{dec} п. горловина (каждое плечо отдельно)"))
+    return results
 
 def slope_shoulder_steps(total_stitches, start_row, end_row, steps=3):
-    """Скос плеча: симметрично, но отдельно по плечам."""
-    if total_stitches <= 0 or end_row < start_row:
-        return []
-    if total_stitches % 2 == 1:
-        total_stitches += 1
-    base = total_stitches // steps
-    parts = [base]*steps
-    parts[-1] += (total_stitches - base*steps)
-    rows = spread_rows(start_row, end_row, steps)
-    return [(r, f"закрыть {p} п. плечо (каждое плечо)") for r, p in zip(rows, parts)]
+    """Скос плеча с гарантированным влезанием."""
+    return distribute_steps(total_stitches, steps, start_row, end_row, "плечо", action_type="-")
 
 def get_section(row, rows_to_armhole_end, armhole_start_row, armhole_end_row, neck_start_row, shoulder_start_row):
     tags = []
@@ -86,7 +106,7 @@ def get_section(row, rows_to_armhole_end, armhole_start_row, armhole_end_row, ne
 def show_table(actions, rows_total, rows_to_armhole_end=None, armhole_start_row=None, armhole_end_row=None, neck_start_row=None, shoulder_start_row=None):
     merged = defaultdict(list)
     for row, note in actions:
-        merged[row].append(note)
+        merged[to_even(row)].append(note)
 
     if not merged:
         st.info("Нет действий для выбранных параметров.")
@@ -96,12 +116,12 @@ def show_table(actions, rows_total, rows_to_armhole_end=None, armhole_start_row=
             "Ряд": rows_sorted,
             "Действия": [", ".join(merged[r]) for r in rows_sorted],
         }
-        if armhole_start_row is not None:  # для переда/спинки
+        if armhole_start_row is not None:  # перед/спинка
             data["Сегмент"] = [
                 get_section(r, rows_to_armhole_end, armhole_start_row, armhole_end_row, neck_start_row, shoulder_start_row)
                 for r in rows_sorted
             ]
-        else:  # для рукава
+        else:  # рукав
             data["Сегмент"] = ["Рукав" if r < rows_total else "Окат (прямой)" for r in rows_sorted]
 
         df = pd.DataFrame(data)
@@ -134,7 +154,6 @@ with tab1:
     shoulder_slope_cm = st.number_input("Высота скоса плеча (см)", min_value=1, value=4, key="sh_slope1")
 
     if st.button("🔄 Рассчитать перед"):
-        # пересчёты
         stitches_chest      = cm_to_st(chest_cm, density_st)
         stitches_hip        = cm_to_st(hip_cm,   density_st)
         stitches_shoulders  = cm_to_st(shoulders_width_cm, density_st)
@@ -149,20 +168,17 @@ with tab1:
         rows_shoulder_slope = cm_to_rows(shoulder_slope_cm, density_row)
 
         rows_to_armhole_end = rows_total - rows_armhole
-        shoulder_start_row  = max(5, rows_total - rows_shoulder_slope + 1)
-        neck_start_row      = max(5, rows_total - neck_rows + 1)
+        shoulder_start_row  = to_even(rows_total - rows_shoulder_slope + 1)
+        neck_start_row      = to_even(rows_total - neck_rows + 1)
 
         armhole_start_row = rows_to_armhole_end + 1
         armhole_end_row   = min(rows_total, shoulder_start_row - 1)
 
-        armhole_extra_st_total = stitches_shoulders - stitches_chest
-        if armhole_extra_st_total % 2 == 1:
-            armhole_extra_st_total += 1
-
+        # действия
         actions = []
-        actions += distribute_side_increases(5, rows_to_armhole_end, stitches_chest - stitches_hip, "бок")
-        actions += distribute_side_increases(armhole_start_row, armhole_end_row, armhole_extra_st_total, "пройма")
-        actions += calc_round_neckline(neck_stitches, neck_rows, neck_start_row)
+        actions += distribute_steps(stitches_chest - stitches_hip, abs(stitches_chest - stitches_hip)//2, 6, rows_to_armhole_end, "бок", action_type="+")
+        actions += distribute_steps(stitches_shoulders - stitches_chest, abs(stitches_shoulders - stitches_chest)//2, armhole_start_row, armhole_end_row, "пройма", action_type="+")
+        actions += calc_round_neckline(neck_stitches, neck_rows, neck_start_row, rows_total)
         actions += slope_shoulder_steps(stitches_shoulder, shoulder_start_row, rows_total, steps=3)
 
         st.subheader("Пошаговый план")
@@ -184,13 +200,12 @@ with tab2:
     shoulders_width_cm = st.number_input("Ширина изделия по плечам (см)", min_value=20, value=100, key="shoulders2")
 
     neck_width_cm = st.number_input("Ширина горловины (см)", min_value=5, value=18, key="neck_w2")
-    neck_depth_cm = st.number_input("Глубина горловины (см)", min_value=1, value=3, key="neck_d2")  # меньше чем спереди
+    neck_depth_cm = st.number_input("Глубина горловины (см)", min_value=1, value=3, key="neck_d2")
 
     shoulder_len_cm   = st.number_input("Длина одного плеча (см)", min_value=5, value=12, key="sh_len2")
     shoulder_slope_cm = st.number_input("Высота скоса плеча (см)", min_value=1, value=4, key="sh_slope2")
 
     if st.button("🔄 Рассчитать спинку"):
-        # пересчёты (аналогично переду)
         stitches_chest      = cm_to_st(chest_cm, density_st)
         stitches_hip        = cm_to_st(hip_cm,   density_st)
         stitches_shoulders  = cm_to_st(shoulders_width_cm, density_st)
@@ -205,20 +220,16 @@ with tab2:
         rows_shoulder_slope = cm_to_rows(shoulder_slope_cm, density_row)
 
         rows_to_armhole_end = rows_total - rows_armhole
-        shoulder_start_row  = max(5, rows_total - rows_shoulder_slope + 1)
-        neck_start_row      = max(5, rows_total - neck_rows + 1)
+        shoulder_start_row  = to_even(rows_total - rows_shoulder_slope + 1)
+        neck_start_row      = to_even(rows_total - neck_rows + 1)
 
         armhole_start_row = rows_to_armhole_end + 1
         armhole_end_row   = min(rows_total, shoulder_start_row - 1)
 
-        armhole_extra_st_total = stitches_shoulders - stitches_chest
-        if armhole_extra_st_total % 2 == 1:
-            armhole_extra_st_total += 1
-
         actions = []
-        actions += distribute_side_increases(5, rows_to_armhole_end, stitches_chest - stitches_hip, "бок")
-        actions += distribute_side_increases(armhole_start_row, armhole_end_row, armhole_extra_st_total, "пройма")
-        actions += calc_round_neckline(neck_stitches, neck_rows, neck_start_row)
+        actions += distribute_steps(stitches_chest - stitches_hip, abs(stitches_chest - stitches_hip)//2, 6, rows_to_armhole_end, "бок", action_type="+")
+        actions += distribute_steps(stitches_shoulders - stitches_chest, abs(stitches_shoulders - stitches_chest)//2, armhole_start_row, armhole_end_row, "пройма", action_type="+")
+        actions += calc_round_neckline(neck_stitches, neck_rows, neck_start_row, rows_total)
         actions += slope_shoulder_steps(stitches_shoulder, shoulder_start_row, rows_total, steps=3)
 
         st.subheader("Пошаговый план")
@@ -246,7 +257,7 @@ with tab3:
             delta += 1
 
         actions = []
-        actions += distribute_side_increases(5, rows_total - 1, delta, "рукав")
+        actions += distribute_steps(delta, delta//2, 6, rows_total, "рукав", action_type="+")
         actions.append((rows_total, "Закрыть все петли (прямой окат)"))
 
         st.subheader("Пошаговый план")
