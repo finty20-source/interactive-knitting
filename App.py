@@ -1,5 +1,6 @@
 import streamlit as st
 import numpy as np
+import pandas as pd
 from collections import defaultdict
 
 st.title("🧶 Интерактивное вязание — расчёт переда (единый план)")
@@ -34,39 +35,11 @@ shoulder_slope_cm = st.number_input("Высота скоса плеча (см)",
 st.write("---")
 
 # -----------------------------
-# Пересчёт см → петли/ряды
+# Вспомогательные функции
 # -----------------------------
 def cm_to_st(cm, dens_st):   return int(round((cm/10.0)*dens_st))
 def cm_to_rows(cm, dens_row):return int(round((cm/10.0)*dens_row))
 
-stitches_chest      = cm_to_st(chest_cm, density_st)
-stitches_hip        = cm_to_st(hip_cm,   density_st)
-stitches_shoulders  = cm_to_st(shoulders_width_cm, density_st)
-
-rows_total          = cm_to_rows(length_cm, density_row)
-rows_armhole        = cm_to_rows(armhole_depth_cm, density_row)
-
-neck_stitches       = cm_to_st(neck_width_cm, density_st)
-neck_rows           = cm_to_rows(neck_depth_cm, density_row)
-
-stitches_shoulder   = cm_to_st(shoulder_len_cm, density_st)
-rows_shoulder_slope = cm_to_rows(shoulder_slope_cm, density_row)
-
-# границы сегментов
-rows_to_armhole_end = rows_total - rows_armhole
-shoulder_start_row  = max(2, rows_total - rows_shoulder_slope + 1)
-neck_start_row      = max(2, rows_total - neck_rows + 1)
-
-armhole_start_row = rows_to_armhole_end + 1
-armhole_end_row   = min(rows_total, shoulder_start_row - 1)
-
-armhole_extra_st_total = stitches_shoulders - stitches_chest
-if armhole_extra_st_total % 2 == 1:
-    armhole_extra_st_total += 1  # всегда чётное
-
-# -----------------------------
-# Утилиты распределения
-# -----------------------------
 def spread_rows(start_row: int, end_row: int, count: int):
     """Равномерное распределение по рядам (начиная с >=2)."""
     if count <= 0 or end_row < start_row:
@@ -124,34 +97,7 @@ def slope_shoulder_steps(total_stitches, start_row, end_row, steps=3):
     rows = spread_rows(start_row, end_row, steps)
     return [(r, f"закрыть {p} п. плечо (каждое плечо)") for r, p in zip(rows, parts)]
 
-# -----------------------------
-# Генерация плана
-# -----------------------------
-actions = []
-
-# Низ → грудь
-delta_bottom = stitches_chest - stitches_hip
-if delta_bottom % 2 == 1:
-    delta_bottom += 1
-actions += distribute_side_increases(2, rows_to_armhole_end, delta_bottom, "бок")
-
-# Пройма
-actions += distribute_side_increases(armhole_start_row, armhole_end_row, armhole_extra_st_total, "пройма")
-
-# Горловина
-actions += calc_round_neckline(neck_stitches, neck_rows, neck_start_row)
-
-# Скос плеча
-actions += slope_shoulder_steps(stitches_shoulder, shoulder_start_row, rows_total, steps=3)
-
-# -----------------------------
-# Схлопываем по рядам
-# -----------------------------
-merged = defaultdict(list)
-for row, note in actions:
-    merged[row].append(note)
-
-def get_section(row):
+def get_section(row, rows_to_armhole_end, armhole_start_row, armhole_end_row, neck_start_row, shoulder_start_row):
     tags = []
     if row <= rows_to_armhole_end:
         tags.append("Низ изделия")
@@ -164,24 +110,81 @@ def get_section(row):
     return ", ".join(tags) if tags else "—"
 
 # -----------------------------
-# Вывод
+# Кнопка запуска
 # -----------------------------
-st.header("Единый пошаговый план")
+if st.button("🔄 Рассчитать выкройку"):
+    # пересчёт см → петли/ряды
+    stitches_chest      = cm_to_st(chest_cm, density_st)
+    stitches_hip        = cm_to_st(hip_cm,   density_st)
+    stitches_shoulders  = cm_to_st(shoulders_width_cm, density_st)
 
-if not merged:
-    st.info("Нет действий для выбранных параметров.")
-else:
-    current_section = ""
-    for row in sorted(merged.keys()):
-        section = get_section(row)
-        if section != current_section:
-            st.subheader(section)
-            current_section = section
-        st.write(f"➡️ Ряд {row}: " + ", ".join(merged[row]))
+    rows_total          = cm_to_rows(length_cm, density_row)
+    rows_armhole        = cm_to_rows(armhole_depth_cm, density_row)
 
-st.write("---")
-st.success(
-    f"Итого рядов: {rows_total}. "
-    f"Горловина с {neck_start_row}-го ряда, "
-    f"скос плеча с {shoulder_start_row}-го ряда."
-)
+    neck_stitches       = cm_to_st(neck_width_cm, density_st)
+    neck_rows           = cm_to_rows(neck_depth_cm, density_row)
+
+    stitches_shoulder   = cm_to_st(shoulder_len_cm, density_st)
+    rows_shoulder_slope = cm_to_rows(shoulder_slope_cm, density_row)
+
+    rows_to_armhole_end = rows_total - rows_armhole
+    shoulder_start_row  = max(2, rows_total - rows_shoulder_slope + 1)
+    neck_start_row      = max(2, rows_total - neck_rows + 1)
+
+    armhole_start_row = rows_to_armhole_end + 1
+    armhole_end_row   = min(rows_total, shoulder_start_row - 1)
+
+    armhole_extra_st_total = stitches_shoulders - stitches_chest
+    if armhole_extra_st_total % 2 == 1:
+        armhole_extra_st_total += 1
+
+    # -----------------------------
+    # Генерация действий
+    # -----------------------------
+    actions = []
+
+    # Низ → грудь
+    delta_bottom = stitches_chest - stitches_hip
+    if delta_bottom % 2 == 1:
+        delta_bottom += 1
+    actions += distribute_side_increases(2, rows_to_armhole_end, delta_bottom, "бок")
+
+    # Пройма
+    actions += distribute_side_increases(armhole_start_row, armhole_end_row, armhole_extra_st_total, "пройма")
+
+    # Горловина
+    actions += calc_round_neckline(neck_stitches, neck_rows, neck_start_row)
+
+    # Скос плеча
+    actions += slope_shoulder_steps(stitches_shoulder, shoulder_start_row, rows_total, steps=3)
+
+    # -----------------------------
+    # Схлопывание по рядам
+    # -----------------------------
+    merged = defaultdict(list)
+    for row, note in actions:
+        merged[row].append(note)
+
+    # -----------------------------
+    # Вывод таблицей
+    # -----------------------------
+    st.header("Единый пошаговый план")
+
+    if not merged:
+        st.info("Нет действий для выбранных параметров.")
+    else:
+        rows_sorted = sorted(merged.keys())
+        sections = [get_section(r, rows_to_armhole_end, armhole_start_row, armhole_end_row, neck_start_row, shoulder_start_row) for r in rows_sorted]
+        data = {
+            "Ряд": rows_sorted,
+            "Действия": [", ".join(merged[r]) for r in rows_sorted],
+        }
+        df = pd.DataFrame(data)
+        st.dataframe(df, use_container_width=True, hide_index=True)
+
+    st.write("---")
+    st.success(
+        f"Итого рядов: {rows_total}. "
+        f"Горловина с {neck_start_row}-го ряда, "
+        f"скос плеча с {shoulder_start_row}-го ряда."
+    )
