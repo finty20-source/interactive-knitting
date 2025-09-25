@@ -52,7 +52,7 @@ def sym_increases(total_add: int, start_row: int, end_row: int, rows_total: int,
     return [(r, f"+{v} п. {label} слева и +{v} п. {label} справа") for r, v in zip(chosen, parts)]
 
 def sym_decreases(total_sub: int, start_row: int, end_row: int, rows_total: int, label: str):
-    """Симметричные убавки: одинаково слева и справа (по очереди)."""
+    """Симметричные убавки: одинаково слева и справа."""
     if total_sub <= 0: return []
     if total_sub % 2 == 1: total_sub += 1
     rows = allowed_even_rows(start_row, end_row, rows_total)
@@ -115,7 +115,7 @@ def calc_round_neckline(total_stitches: int, total_rows: int, start_row: int, ro
     return actions
 
 # -----------------------------
-# Таблица
+# Таблица с сегментами
 # -----------------------------
 def section_tags(row, rows_to_armhole_end, neck_start_row, shoulder_start_row):
     tags = []
@@ -201,4 +201,5 @@ if st.button("🔄 Рассчитать"):
     actions += slope_shoulder(st_shldr, shoulder_start_row, rows_total, rows_total)
 
     st.subheader("📋 Инструкция")
-    make_table(actions, rows_total)
+    make_table(actions, rows_total,
+               rows_to_armhole_end, neck_start_row, shoulder_start_row)
