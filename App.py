@@ -20,7 +20,7 @@ def allowed_even_rows(start_row, end_row, rows_total):
             rows.append(r)
     return rows
 
-# --- НОВАЯ ГОРЛОВИНА ---
+# --- ГОРЛОВИНА ---
 def calc_round_neckline(total_stitches: int, total_rows: int, start_row: int, rows_total: int, straight_percent: float = 0.05):
     """
     Горловина:
@@ -112,17 +112,13 @@ def slope_shoulder(total_stitches: int, start_row: int, end_row: int, rows_total
 
 # --- РЕНДЕР В ТАБЛИЦУ ---
 def render_table(rows_total, sections):
-    merged = defaultdict(list)
-    for label, actions in sections:
-        for r, note in actions:
-            merged[r].append(f"{note} [{label}]")
-
     data = []
-    for r in range(1, rows_total + 1):
-        if r in merged:
-            data.append((r, "; ".join(merged[r])))
-        else:
-            data.append((r, ""))
+    for label, actions in sections:
+        if actions:
+            # вставляем подзаголовок
+            data.append(("", f"--- {label} ---"))
+            for r, note in actions:
+                data.append((r, note))
     df = pd.DataFrame(data, columns=["Ряд", "Действие"])
     st.table(df)
 
@@ -141,10 +137,22 @@ with st.form("inputs"):
 if submitted:
     sections = []
     # Горловина
-    neck = calc_round_neckline(neck_stitches, neck_rows, rows_total - neck_rows + 1, rows_total)
+    neck = calc_round_neckline(
+        neck_stitches,
+        neck_rows,
+        rows_total - neck_rows + 1,
+        rows_total
+    )
     sections.append(("Горловина", neck))
+
     # Плечо
-    shoulder = slope_shoulder(shoulder_stitches, rows_total - shoulder_rows + 1, rows_total, rows_total)
+    shoulder = slope_shoulder(
+        shoulder_stitches,
+        rows_total - shoulder_rows + 1,
+        rows_total,
+        rows_total
+    )
     sections.append(("Плечо", shoulder))
+
     st.subheader("📋 Инструкция")
     render_table(rows_total, sections)
