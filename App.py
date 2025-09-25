@@ -22,14 +22,17 @@ st.write("---")
 # -----------------------------
 # Функции
 # -----------------------------
-def cm_to_st(cm, dens_st):   return int(round((cm/10.0)*dens_st))
-def cm_to_rows(cm, dens_row):return int(round((cm/10.0)*dens_row))
+def cm_to_st(cm, dens_st):   
+    return int(round((cm/10.0)*dens_st))
+
+def cm_to_rows(cm, dens_row):
+    return int(round((cm/10.0)*dens_row))
 
 def spread_rows(start_row: int, end_row: int, count: int):
-    """Равномерное распределение по рядам (начиная с >=2)."""
+    """Равномерное распределение по рядам (не раньше 5-го ряда)."""
     if count <= 0 or end_row < start_row:
         return []
-    start_row = max(2, start_row)
+    start_row = max(5, start_row)  # правило: не раньше 5-го ряда
     if start_row == end_row:
         return [start_row]*count
     xs = np.linspace(start_row, end_row, num=count, endpoint=True)
@@ -67,7 +70,7 @@ if st.button("🔄 Рассчитать рукав"):
     actions = []
 
     # Прибавки от манжеты к верху
-    actions += distribute_side_increases(2, rows_total - 1, delta, "рукав")
+    actions += distribute_side_increases(5, rows_total - 1, delta, "рукав")
 
     # Закрытие оката (прямое)
     actions.append((rows_total, "Закрыть все петли (прямой окат)"))
