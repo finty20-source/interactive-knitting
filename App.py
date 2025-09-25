@@ -117,13 +117,31 @@ def calc_round_neckline(total_stitches: int, total_rows: int, start_row: int, ro
 # -----------------------------
 # Таблица
 # -----------------------------
-def make_table(actions, rows_total):
+def section_tags(row, rows_to_armhole_end, neck_start_row, shoulder_start_row):
+    tags = []
+    if row <= rows_to_armhole_end:
+        tags.append("Низ изделия")
+    if row >= rows_to_armhole_end + 1:
+        tags.append("Пройма")
+    if neck_start_row and row >= neck_start_row:
+        tags.append("Горловина")
+    if shoulder_start_row and row >= shoulder_start_row:
+        tags.append("Скос плеча")
+    return ", ".join(tags) if tags else "—"
+
+def make_table(actions, rows_total, rows_to_armhole_end, neck_start_row, shoulder_start_row):
     merged = defaultdict(list)
     for row, note in actions:
         merged[row].append(note)
     rows_sorted = sorted(merged.keys())
-    data = {"Ряд": rows_sorted,
-            "Действия": ["; ".join(merged[r]) for r in rows_sorted]}
+    data = {
+        "Ряд": rows_sorted,
+        "Действия": ["; ".join(merged[r]) for r in rows_sorted],
+        "Сегмент": [
+            section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)
+            for r in rows_sorted
+        ]
+    }
     df = pd.DataFrame(data)
     st.dataframe(df, use_container_width=True, hide_index=True)
 
