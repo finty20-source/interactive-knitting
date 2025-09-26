@@ -254,12 +254,14 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
                                section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
             prev = r + 1
 
-        if prev <= rows_total:
-            seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
-            if prev == rows_total:
-                table_rows.append((str(prev), "Прямо", seg))
-            else:
-                table_rows.append((f"{prev}-{rows_total}", "Прямо", seg))
+    # конец = последний ряд скоса плеча
+    last_row = shoulder_start_row + rows_slope - 1
+    if prev <= last_row:
+        seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
+        if prev == last_row:
+            table_rows.append((str(prev), "Прямо", seg))
+        else:
+            table_rows.append((f"{prev}-{last_row}", "Прямо", seg))
 
     df = pd.DataFrame(table_rows, columns=["Ряды", "Действия", "Сегмент"])
     st.dataframe(df, use_container_width=True, hide_index=True)
@@ -310,8 +312,8 @@ if st.button("🔄 Рассчитать"):
     # -----------------------------
     st_hip     = cm_to_st(hip_cm, density_st)        # низ
     st_chest   = cm_to_st(chest_cm, density_st)      # грудь
-    rows_total = cm_to_rows(length_cm, density_row)
-    rows_armh  = cm_to_rows(armhole_depth_cm, density_row)
+    rows_total = cm_to_rows(length_cm, density_row)  # вся высота изделия
+    rows_armh  = cm_to_rows(armhole_depth_cm, density_row)  # глубина проймы
 
     neck_st    = cm_to_st(neck_width_cm, density_st)
     neck_rows_front  = cm_to_rows(neck_depth_cm, density_row)
@@ -322,8 +324,11 @@ if st.button("🔄 Рассчитать"):
 
     st_shoulders = 2 * st_shldr + neck_st   # скрытая ширина по плечам
 
-    rows_to_armhole_end = rows_total - rows_armh
-    armhole_start_row   = rows_to_armhole_end + 1
+    # низ = вся высота - пройма - плечо
+    rows_bottom = rows_total - rows_armh - rows_slope
+
+    # начало и конец этапов
+    armhole_start_row   = rows_bottom + 1
     shoulder_start_row  = rows_total - rows_slope + 1
     armhole_end_row     = shoulder_start_row - 1
 
