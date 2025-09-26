@@ -83,35 +83,45 @@ def slope_shoulder(total_stitches, start_row, end_row, rows_total):
 # -----------------------------
 # Горловина (круглая)
 # -----------------------------
-def calc_round_neckline(total_stitches, total_rows, start_row, rows_total, straight_percent=0.05):
+def calc_round_neckline(total_stitches, total_rows, start_row, rows_total, shoulder_start_row):
+    """Округлая горловина: первая убавка 60%, затем распределённые убавки.
+       Последние 20% рядов идут прямо, но не позже начала плеча."""
     if total_stitches <= 0 or total_rows <= 0:
         return []
 
+    # первый шаг ~60%
     first_dec = int(round(total_stitches * 0.60))
     if first_dec % 2 == 1:
         first_dec += 1
     rest = total_stitches - first_dec
 
-    straight_rows = max(2, int(round(total_rows * straight_percent)))
+    # последние прямые ряды = 20% глубины горловины
+    straight_rows = max(2, int(round(total_rows * 0.20)))
+    # конец горловины по глубине минус прямые ряды
     neck_end_by_depth = start_row + total_rows - 1 - straight_rows
-    effective_end = min(neck_end_by_depth, rows_total - 2)
+    # но не позже, чем начало плеча
+    neck_end_by_shoulder = shoulder_start_row - 1
+    effective_end = min(neck_end_by_depth, neck_end_by_shoulder)
 
     rows = allowed_even_rows(start_row, effective_end, rows_total)
     if not rows:
         return []
 
     actions = []
+    # первая крупная убавка в середине
     actions.append((rows[0], f"-{first_dec} п. горловина (середина, разделение на плечи)"))
 
     if rest <= 0 or len(rows) == 1:
         return actions
 
+    # оставшиеся убавки
     rest_rows = rows[1:]
     steps = min(len(rest_rows), rest)
     idxs   = np.linspace(0, len(rest_rows)-1, num=steps, dtype=int)
     chosen = [rest_rows[i] for i in idxs]
     parts  = split_total_into_steps(rest, steps)
 
+    # последние 2 шага <= 1 петли
     if steps >= 2:
         over = 0
         for i in [steps-2, steps-1]:
@@ -338,7 +348,7 @@ if st.button("🔄 Рассчитать"):
         actions += sym_decreases(-delta_bottom, 6, rows_to_armhole_end, rows_total, "бок")
 
     actions += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
-    actions += calc_round_neckline(neck_st, neck_rows_front, neck_start_row_front, rows_total)
+    actions += calc_round_neckline(neck_st, neck_rows_front, neck_start_row_front, rows_total, shoulder_start_row)
     actions += slope_shoulder(st_shldr, shoulder_start_row, rows_total, rows_total)
 
     make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row_front, shoulder_start_row)
@@ -358,7 +368,7 @@ elif delta_bottom < 0:
 actions_back += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
 
 # горловина (для спинки глубина меньше)
-actions_back += calc_round_neckline(neck_st, neck_rows_back, neck_start_row_back, rows_total)
+actions_back += calc_round_neckline(neck_st, neck_rows_back, neck_start_row_back, rows_total, shoulder_start_row)
 
 # скос плеча
 actions_back += slope_shoulder(st_shldr, shoulder_start_row, rows_total, rows_total)
