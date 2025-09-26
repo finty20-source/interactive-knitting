@@ -197,24 +197,33 @@ shoulder_slope_cm= st.number_input("Скос плеча (см)", 1, 20, 4)
 
 if st.button("🔄 Рассчитать"):
     # в петли/ряды
-    st_hip     = cm_to_st(hip_cm, density_st)
-    rows_total = cm_to_rows(length_cm, density_row)
-    rows_armh  = cm_to_rows(armhole_depth_cm, density_row)
+# в петли/ряды
+st_hip     = cm_to_st(hip_cm, density_st)
+rows_total = cm_to_rows(length_cm, density_row)
+rows_armh  = cm_to_rows(armhole_depth_cm, density_row)
 
-    neck_st    = cm_to_st(neck_width_cm, density_st)
-    neck_rows_front  = cm_to_rows(neck_depth_cm, density_row)
-    neck_rows_back   = cm_to_rows(neck_depth_back_cm, density_row)
+neck_st    = cm_to_st(neck_width_cm, density_st)
+neck_rows_front  = cm_to_rows(neck_depth_cm, density_row)
+neck_rows_back   = cm_to_rows(neck_depth_back_cm, density_row)
 
-    st_shldr   = cm_to_st(shoulder_len_cm, density_st)
-    rows_slope = cm_to_rows(shoulder_slope_cm, density_row)
+st_shldr   = cm_to_st(shoulder_len_cm, density_st)
+rows_slope = cm_to_rows(shoulder_slope_cm, density_row)
 
-    st_shoulders = 2 * st_shldr + neck_st
-    st_chest = st_shoulders  # скрытый параметр для расчётов
+# ширина по плечам = 2*плечо + горловина (как и было)
+st_shoulders = 2 * st_shldr + neck_st
 
-    rows_to_armhole_end = rows_total - rows_armh
-    neck_start_row_front= rows_total - neck_rows_front + 1
-    neck_start_row_back = rows_total - neck_rows_back + 1
-    shoulder_start_row  = rows_total - rows_slope + 1
+# ⬇️ скрытая "ширина груди": по умолчанию = ширине низа (прямой силуэт)
+# при желании потом можно ввести внутреннюю прибавку ease_chest_cm и пересчитать
+st_chest = st_hip
+
+# ключевые ряды
+rows_to_armhole_end = rows_total - rows_armh
+armhole_start_row   = rows_to_armhole_end + 1
+shoulder_start_row  = rows_total - rows_slope + 1
+armhole_end_row     = shoulder_start_row - 1  # пройма заканчивается перед плечом
+
+neck_start_row_front = rows_total - neck_rows_front + 1
+neck_start_row_back  = rows_total - neck_rows_back + 1
 
     st.subheader("📊 Сводка")
     st.write(f"- Набрать петель: **{st_hip}**")
