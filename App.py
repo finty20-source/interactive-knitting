@@ -29,6 +29,37 @@ def allowed_even_rows(start_row: int, end_row: int, rows_total: int, force_last=
     if start % 2 == 1: start += 1
     if high % 2 == 1: high -= 1
     return list(range(start, high + 1, 2)) if start <= high else []
+def split_total_into_steps(total: int, steps: int):
+    if total <= 0 or steps <= 0:
+        return []
+    steps = min(steps, total)
+    base = total // steps
+    rem  = total % steps
+    return [base + (1 if i < rem else 0) for i in range(steps)]
+
+def sym_increases(total_add, start_row, end_row, rows_total, label):
+    if total_add <= 0: return []
+    if total_add % 2 == 1: total_add += 1
+    rows = allowed_even_rows(start_row, end_row, rows_total)
+    if not rows: return []
+    per_side = total_add // 2
+    steps = min(len(rows), per_side)
+    parts = split_total_into_steps(per_side, steps)
+    idxs  = np.linspace(0, len(rows)-1, num=steps, dtype=int)
+    chosen= [rows[i] for i in idxs]
+    return [(r, f"+{v} п. {label} (с каждой стороны)") for r, v in zip(chosen, parts)]
+
+def sym_decreases(total_sub, start_row, end_row, rows_total, label):
+    if total_sub <= 0: return []
+    if total_sub % 2 == 1: total_sub += 1
+    rows = allowed_even_rows(start_row, end_row, rows_total)
+    if not rows: return []
+    per_side = total_sub // 2
+    steps = min(len(rows), per_side)
+    parts = split_total_into_steps(per_side, steps)
+    idxs  = np.linspace(0, len(rows)-1, num=steps, dtype=int)
+    chosen= [rows[i] for i in idxs]
+    return [(r, f"-{v} п. {label} (с каждой стороны)") for r, v in zip(chosen, parts)]
 
 
 # -----------------------------
@@ -197,7 +228,7 @@ def section_tags(row, rows_to_armhole_end, neck_start_row, shoulder_start_row):
         tags.append("Скос плеча")
     return " + ".join(tags) if tags else "—"
 
-def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, shoulder_start_row):
+def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, shoulder_start_row, last_row):
     merged = defaultdict(list)
     for row, note in actions:
         merged[row].append(note)
@@ -208,7 +239,7 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
 
     if not rows_sorted:
         seg = section_tags(1, rows_to_armhole_end, neck_start_row, shoulder_start_row)
-        table_rows.append((f"1-{rows_total}", "Прямо", seg))
+        table_rows.append((f"1-{last_row}", "Прямо", seg))
     else:
         for r in rows_sorted:
             if r > prev:
@@ -222,7 +253,6 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
             prev = r + 1
 
     # конец = последний ряд скоса плеча
-    last_row = shoulder_start_row + rows_slope - 1
     if prev <= last_row:
         seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
         if prev == last_row:
@@ -232,6 +262,7 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
 
     df = pd.DataFrame(table_rows, columns=["Ряды", "Действия", "Сегмент"])
     st.dataframe(df, use_container_width=True, hide_index=True)
+
 
 # -----------------------------
 # Ввод параметров
@@ -335,7 +366,7 @@ if st.button("🔄 Рассчитать"):
     # плечо
     actions += slope_shoulder(st_shldr, shoulder_start_row, last_row, rows_total)
 
-    make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row)
+    make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, last_row)
 
     # -----------------------------
     # 📋 Спинка
@@ -361,4 +392,4 @@ if st.button("🔄 Рассчитать"):
     # объединяем, чтобы горловина и плечо не совпадали
     actions_back = merge_actions(actions_back, rows_total)
 
-    make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row)
+    make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row, last_row)
