@@ -293,7 +293,7 @@ neck_depth_cm_str      = st.text_input("Глубина горловины спе
 neck_depth_back_cm_str = st.text_input("Глубина горловины спинки (см)", placeholder="введите глубину")
 
 shoulder_len_cm_str    = st.text_input("Длина плеча (см)", placeholder="введите длину")
-shoulder_slope_cm_str  = st.text_input("Скос плеча (см)", placeholder="введите 
+shoulder_slope_cm_str  = st.text_input("Скос плеча (см)", placeholder="введите высоту")
 # -----------------------------
 # Кнопка расчёта
 # -----------------------------
