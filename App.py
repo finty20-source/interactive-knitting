@@ -229,10 +229,21 @@ if st.button("🔄 Рассчитать"):
     neck_start_row_back = rows_total - neck_rows_back + 1
     
 if st.button("🔄 Рассчитать"):
-    # 📊 Сводка
-    st.subheader("📊 Сводка")
-    st.write(f"- Набрать петель: **{st_hip}**")
-    st.write(f"- Всего рядов: **{rows_total}**")
+    try:
+        density_st  = int(density_st_str)
+        density_row = int(density_row_str)
+        hip_cm      = int(hip_cm_str)
+        chest_cm    = int(chest_cm_str)
+        length_cm   = int(length_cm_str)
+        armhole_depth_cm = int(armhole_depth_cm_str)
+        neck_width_cm     = int(neck_width_cm_str)
+        neck_depth_cm     = int(neck_depth_cm_str)
+        neck_depth_back_cm= int(neck_depth_back_cm_str)
+        shoulder_len_cm   = int(shoulder_len_cm_str)
+        shoulder_slope_cm = int(shoulder_slope_cm_str)
+    except:
+        st.error("⚠️ Пожалуйста, заполните все поля числами")
+        st.stop()
 
     # ----- ПЕРЕД -----
     st.subheader("📋 Инструкция для переда")
