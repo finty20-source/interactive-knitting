@@ -171,12 +171,16 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
 # -----------------------------
 # Ввод параметров
 # -----------------------------
+# -----------------------------
+# Ввод параметров
+# -----------------------------
 st.header("Перед / Спинка")
 
 density_st  = st.number_input("Плотность: петли в 10 см", 1, 999, 23)
 density_row = st.number_input("Плотность: ряды в 10 см",  1, 999, 40)
 
 hip_cm      = st.number_input("Ширина низа детали (см)", 50, 200, 80)
+chest_cm    = st.number_input("Ширина детали по груди (см)", 50, 200, 90)  # 🔥 обновлённое название
 length_cm   = st.number_input("Длина изделия (см)", 30, 120, 55)
 
 armhole_depth_cm = st.number_input("Длина проймы (см)", 10, 40, 23)
@@ -189,8 +193,10 @@ shoulder_len_cm  = st.number_input("Длина плеча (см)", 5, 30, 12)
 shoulder_slope_cm= st.number_input("Скос плеча (см)", 1, 20, 4)
 
 if st.button("🔄 Рассчитать"):
-    # в петли/ряды
-    st_hip     = cm_to_st(hip_cm, density_st)
+    # пересчёт в петли/ряды
+    st_hip     = cm_to_st(hip_cm, density_st)        # низ
+    st_chest   = cm_to_st(chest_cm, density_st)      # грудь (реальная ширина)
+    
     rows_total = cm_to_rows(length_cm, density_row)
     rows_armh  = cm_to_rows(armhole_depth_cm, density_row)
 
@@ -201,9 +207,9 @@ if st.button("🔄 Рассчитать"):
     st_shldr   = cm_to_st(shoulder_len_cm, density_st)
     rows_slope = cm_to_rows(shoulder_slope_cm, density_row)
 
-    st_shoulders = 2 * st_shldr + neck_st
-    st_chest = st_hip  # скрытый параметр — прямой силуэт
+    st_shoulders = 2 * st_shldr + neck_st   # 🔥 ширина по плечам (скрытая)
 
+    # ключевые ряды
     rows_to_armhole_end = rows_total - rows_armh
     armhole_start_row   = rows_to_armhole_end + 1
     shoulder_start_row  = rows_total - rows_slope + 1
@@ -212,10 +218,14 @@ if st.button("🔄 Рассчитать"):
     neck_start_row_front= rows_total - neck_rows_front + 1
     neck_start_row_back = rows_total - neck_rows_back + 1
 
+    # -----------------------------
+    # 📊 Сводка
+    # -----------------------------
     st.subheader("📊 Сводка")
-    st.write(f"- Набрать петель: **{st_hip}**")
+    st.write(f"- Набрать петель: **{st_hip}** (низ)")
+    st.write(f"- Ширина детали по груди: **{st_chest} п.**")
     st.write(f"- Всего рядов: **{rows_total}**")
-    st.write(f"- Авто ширина по плечам: **{st_shoulders} п.** (= 2×{st_shldr} + {neck_st})")
+    st.write(f"- Авто ширина по плечам (скрытая): **{st_shoulders} п.** (= 2×{st_shldr} + {neck_st})")
 
     # ----- ПЕРЕД -----
     st.subheader("📋 Инструкция для переда")
