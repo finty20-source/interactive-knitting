@@ -173,7 +173,6 @@ density_st  = st.number_input("Плотность: петли в 10 см", 1, 99
 density_row = st.number_input("Плотность: ряды в 10 см",  1, 999, 40)
 
 hip_cm      = st.number_input("Ширина низа детали (см)", 50, 200, 80)
-chest_cm    = st.number_input("Ширина груди детали (см)", 50, 200, 90)
 length_cm   = st.number_input("Длина изделия (см)", 30, 120, 55)
 
 armhole_depth_cm = st.number_input("Длина проймы (см)", 10, 40, 23)
@@ -188,7 +187,6 @@ shoulder_slope_cm= st.number_input("Скос плеча (см)", 1, 20, 4)
 if st.button("🔄 Рассчитать"):
     # в петли/ряды
     st_hip     = cm_to_st(hip_cm, density_st)
-    st_chest   = cm_to_st(chest_cm, density_st)
     rows_total = cm_to_rows(length_cm, density_row)
     rows_armh  = cm_to_rows(armhole_depth_cm, density_row)
 
@@ -200,6 +198,7 @@ if st.button("🔄 Рассчитать"):
     rows_slope = cm_to_rows(shoulder_slope_cm, density_row)
 
     st_shoulders = 2 * st_shldr + neck_st
+    st_chest = st_shoulders  # скрытый параметр для расчётов
 
     rows_to_armhole_end = rows_total - rows_armh
     neck_start_row_front= rows_total - neck_rows_front + 1
