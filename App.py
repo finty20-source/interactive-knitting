@@ -293,37 +293,44 @@ if st.button("🔄 Рассчитать"):
         st.error("⚠️ Пожалуйста, заполните все поля числами (можно с точкой или запятой)")
         st.stop()
 
-# -----------------------------
-# Пересчёт в петли/ряды
-# -----------------------------
-st_hip     = cm_to_st(hip_cm, density_st)        # низ
-st_chest   = cm_to_st(chest_cm, density_st)      # грудь
-rows_total = cm_to_rows(length_cm, density_row)  # вся высота изделия
-rows_armh  = cm_to_rows(armhole_depth_cm, density_row)  # глубина проймы
+    # 🚨 Проверка что все поля заполнены
+    if not all([density_st, density_row, hip_cm, chest_cm, length_cm,
+                armhole_depth_cm, neck_width_cm, neck_depth_cm,
+                neck_depth_back_cm, shoulder_len_cm, shoulder_slope_cm]):
+        st.error("⚠️ Заполните все поля перед расчётом")
+        st.stop()
 
-neck_st    = cm_to_st(neck_width_cm, density_st)
-neck_rows_front  = cm_to_rows(neck_depth_cm, density_row)
-neck_rows_back   = cm_to_rows(neck_depth_back_cm, density_row)
+    # -----------------------------
+    # Пересчёт в петли/ряды
+    # -----------------------------
+    st_hip     = cm_to_st(hip_cm, density_st)        # низ
+    st_chest   = cm_to_st(chest_cm, density_st)      # грудь
+    rows_total = cm_to_rows(length_cm, density_row)  # вся высота изделия
+    rows_armh  = cm_to_rows(armhole_depth_cm, density_row)  # глубина проймы
 
-st_shldr   = cm_to_st(shoulder_len_cm, density_st)
-rows_slope = cm_to_rows(shoulder_slope_cm, density_row)
+    neck_st    = cm_to_st(neck_width_cm, density_st)
+    neck_rows_front  = cm_to_rows(neck_depth_cm, density_row)
+    neck_rows_back   = cm_to_rows(neck_depth_back_cm, density_row)
 
-st_shoulders = 2 * st_shldr + neck_st   # скрытая ширина по плечам
+    st_shldr   = cm_to_st(shoulder_len_cm, density_st)
+    rows_slope = cm_to_rows(shoulder_slope_cm, density_row)
 
-# низ = вся высота - пройма - плечо
-rows_bottom = rows_total - rows_armh - rows_slope
+    st_shoulders = 2 * st_shldr + neck_st   # скрытая ширина по плечам
 
-# начало и конец этапов
-armhole_start_row   = rows_bottom + 1
-shoulder_start_row  = rows_total - rows_slope + 1
-armhole_end_row     = shoulder_start_row - 1
+    # низ = вся высота - пройма - плечо
+    rows_bottom = rows_total - rows_armh - rows_slope
 
-# последний ряд изделия (окончание плеча)
-last_row = shoulder_start_row + rows_slope - 1
+    # начало и конец этапов
+    armhole_start_row   = rows_bottom + 1
+    shoulder_start_row  = rows_total - rows_slope + 1
+    armhole_end_row     = shoulder_start_row - 1
 
-# начало горловин
-neck_start_row_front = rows_total - neck_rows_front + 1
-neck_start_row_back  = rows_total - neck_rows_back + 1
+    # последний ряд изделия (окончание плеча)
+    last_row = shoulder_start_row + rows_slope - 1
+
+    # начало горловин
+    neck_start_row_front = rows_total - neck_rows_front + 1
+    neck_start_row_back  = rows_total - neck_rows_back + 1
 
 # -----------------------------
 # 📊 Сводка
