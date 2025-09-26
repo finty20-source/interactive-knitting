@@ -315,16 +315,16 @@ if st.button("🔄 Рассчитать"):
         st.error("⚠️ Пожалуйста, заполните все поля числами (можно с точкой или запятой)")
         st.stop()
 
-    # -----------------------------
-# Проверка заполненности всех полей
-# -----------------------------
-inputs = [
-    density_st_str, density_row_str,
-    hip_cm_str, chest_cm_str, length_cm_str,
-    armhole_depth_cm_str,
-    neck_width_cm_str, neck_depth_cm_str, neck_depth_back_cm_str,
-    shoulder_len_cm_str, shoulder_slope_cm_str
-]
+        # -----------------------------
+        # Проверка заполненности всех полей
+        # -----------------------------
+        inputs = [
+        density_st_str, density_row_str,
+        hip_cm_str, chest_cm_str, length_cm_str,
+        armhole_depth_cm_str,
+        neck_width_cm_str, neck_depth_cm_str, neck_depth_back_cm_str,
+        shoulder_len_cm_str, shoulder_slope_cm_str
+    ]
 
 if not all(inputs):
     st.error("⚠️ Заполните все поля перед расчётом")
