@@ -361,12 +361,15 @@ if st.button("🔄 Рассчитать"):
     actions += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
 
     # горловина
-    actions += calc_round_neckline(neck_st, neck_rows_front, neck_start_row_front, rows_total, last_row)
+actions += calc_round_neckline(neck_st, neck_rows_front, neck_start_row_front, rows_total, last_row)
 
-    # плечо
-    actions += slope_shoulder(st_shldr, shoulder_start_row, last_row, rows_total)
+# плечо
+actions += slope_shoulder(st_shldr, shoulder_start_row, last_row, rows_total)
 
-    make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, last_row)
+# ⚡️ новый шаг
+actions = merge_actions(actions, rows_total)
+
+make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, last_row)
 
     # -----------------------------
     # 📋 Спинка
@@ -384,7 +387,16 @@ if st.button("🔄 Рассчитать"):
     actions_back += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
 
     # горловина (для спинки глубина меньше)
-    actions_back += calc_round_neckline(neck_st, neck_rows_back, neck_start_row_back, rows_total, last_row)
+    # горловина (для спинки глубина меньше, прямые ряды = 2%)
+    actions_back += calc_round_neckline(
+        neck_st,
+        neck_rows_back,
+        neck_start_row_back,
+        rows_total,
+        last_row,
+        straight_percent=0.02
+    )
+
 
     # плечо
     actions_back += slope_shoulder(st_shldr, shoulder_start_row, last_row, rows_total)
