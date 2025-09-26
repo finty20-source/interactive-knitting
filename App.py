@@ -474,13 +474,15 @@ if st.button("🔄 Рассчитать"):
             mime="application/pdf"
         )
             # -----------------------------
-                # Сохраняем данные в session_state
-                # -----------------------------
-                st.session_state.actions = actions
-                st.session_state.actions_back = actions_back
-                st.session_state.st_hip = st_hip
-                st.session_state.rows_total = rows_total
-                st.session_state.rows_bottom = rows_bottom
+    # Сохраняем данные в session_state
+    # -----------------------------
+    st.session_state.actions = actions
+    st.session_state.actions_back = actions_back
+    st.session_state.st_hip = st_hip
+    st.session_state.rows_total = rows_total
+    st.session_state.rows_bottom = rows_bottom
+
+
 
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
