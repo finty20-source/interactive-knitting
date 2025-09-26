@@ -121,20 +121,6 @@ def calc_round_neckline(total_stitches, total_rows, start_row, rows_total, shoul
     chosen = [rest_rows[i] for i in idxs]
     parts  = split_total_into_steps(rest, steps)
 
-    # последние 2 шага <= 1 петли
-    if steps >= 2:
-        over = 0
-        for i in [steps-2, steps-1]:
-            if parts[i] > 1:
-                over += parts[i] - 1
-                parts[i] = 1
-        jmax = max(1, steps-2)
-        j = 0
-        while over > 0 and jmax > 0:
-            parts[j % jmax] += 1
-            over -= 1
-            j += 1
-
     for r, v in zip(chosen, parts):
         actions.append((r, f"-{v} п. горловина (каждое плечо)"))
     return actions
