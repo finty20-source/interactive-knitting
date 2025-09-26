@@ -201,19 +201,19 @@ shoulder_slope_cm_str = st.text_input("Скос плеча (см)", placeholder=
 
 if st.button("🔄 Рассчитать"):
     try:
-        density_st        = int(density_st_str)
-        density_row       = int(density_row_str)
-        hip_cm            = int(hip_cm_str)
-        chest_cm          = int(chest_cm_str)
-        length_cm         = int(length_cm_str)
-        armhole_depth_cm  = int(armhole_depth_cm_str)
-        neck_width_cm     = int(neck_width_cm_str)
-        neck_depth_cm     = int(neck_depth_cm_str)
-        neck_depth_back_cm= int(neck_depth_back_cm_str)
-        shoulder_len_cm   = int(shoulder_len_cm_str)
-        shoulder_slope_cm = int(shoulder_slope_cm_str)
+        density_st        = float(density_st_str.replace(",", "."))
+        density_row       = float(density_row_str.replace(",", "."))
+        hip_cm            = float(hip_cm_str.replace(",", "."))
+        chest_cm          = float(chest_cm_str.replace(",", "."))
+        length_cm         = float(length_cm_str.replace(",", "."))
+        armhole_depth_cm  = float(armhole_depth_cm_str.replace(",", "."))
+        neck_width_cm     = float(neck_width_cm_str.replace(",", "."))
+        neck_depth_cm     = float(neck_depth_cm_str.replace(",", "."))
+        neck_depth_back_cm= float(neck_depth_back_cm_str.replace(",", "."))
+        shoulder_len_cm   = float(shoulder_len_cm_str.replace(",", "."))
+        shoulder_slope_cm = float(shoulder_slope_cm_str.replace(",", "."))
     except:
-        st.error("⚠️ Пожалуйста, заполните все поля числами")
+        st.error("⚠️ Пожалуйста, заполните все поля числами (можно с точкой или запятой)")
         st.stop()
 
     # пересчёт в петли/ряды
