@@ -386,7 +386,6 @@ make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder
     # пройма
     actions_back += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
 
-    # горловина (для спинки глубина меньше)
     # горловина (для спинки глубина меньше, прямые ряды = 2%)
     actions_back += calc_round_neckline(
         neck_st,
@@ -397,11 +396,10 @@ make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder
         straight_percent=0.02
     )
 
-
     # плечо
     actions_back += slope_shoulder(st_shldr, shoulder_start_row, last_row, rows_total)
 
     # объединяем, чтобы горловина и плечо не совпадали
     actions_back = merge_actions(actions_back, rows_total)
 
-    make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row, last_row)
+    make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row)
