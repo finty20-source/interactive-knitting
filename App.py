@@ -150,7 +150,6 @@ density_row = st.number_input("Плотность: ряды в 10 см",  1, 999
 
 hip_cm      = st.number_input("Ширина низа (см)", 50, 200, 80)
 chest_cm    = st.number_input("Ширина груди (см)", 50, 200, 90)
-shoulders_cm= st.number_input("Ширина по плечам (см)", 60, 160, 100)
 length_cm   = st.number_input("Длина изделия (см)", 30, 120, 55)
 
 armhole_depth_cm = st.number_input("Глубина проймы (см)", 10, 40, 23)
@@ -160,9 +159,9 @@ shoulder_len_cm  = st.number_input("Длина одного плеча (см)", 
 shoulder_slope_cm= st.number_input("Высота скоса плеча (см)", 1, 20, 4)
 
 if st.button("🔄 Рассчитать"):
+    # Переводим в петли/ряды
     st_hip    = cm_to_st(hip_cm, density_st)
     st_chest  = cm_to_st(chest_cm, density_st)
-    st_shoul  = cm_to_st(shoulders_cm, density_st)
     rows_total= cm_to_rows(length_cm, density_row)
     rows_armh = cm_to_rows(armhole_depth_cm, density_row)
     neck_st   = cm_to_st(neck_width_cm, density_st)
@@ -170,6 +169,10 @@ if st.button("🔄 Рассчитать"):
     st_shldr  = cm_to_st(shoulder_len_cm, density_st)
     rows_slope= cm_to_rows(shoulder_slope_cm, density_row)
 
+    # Автоматическая ширина по плечам
+    st_shoulders = 2 * st_shldr + neck_st
+
+    # Ключевые ряды
     rows_to_armhole_end = rows_total - rows_armh
     neck_start_row      = rows_total - neck_rows + 1
     shoulder_start_row  = rows_total - rows_slope + 1
@@ -183,20 +186,17 @@ if st.button("🔄 Рассчитать"):
     elif delta_bottom < 0:
         actions += sym_decreases(-delta_bottom, 6, rows_to_armhole_end, rows_total, "бок")
 
-    # Пройма (разница между грудью и плечами)
-delta_armh = st_shoul - st_chest
-armhole_start_row = rows_to_armhole_end + 1
-armhole_end_row   = neck_start_row - 1   # ⚡️ до горловины, не доходя до плеча
-
-if delta_armh > 0:
-    actions += sym_increases(delta_armh, armhole_start_row, armhole_end_row, rows_total, "пройма")
-elif delta_armh < 0:
-    actions += sym_decreases(-delta_armh, armhole_start_row, armhole_end_row, rows_total, "пройма")
+    # Пройма (разница грудь ↔ плечи), заканчивается до плеча
+    delta_armh = st_shoulders - st_chest
+    if delta_armh > 0:
+        actions += sym_increases(delta_armh, rows_to_armhole_end+1, shoulder_start_row-1, rows_total, "пройма")
+    elif delta_armh < 0:
+        actions += sym_decreases(-delta_armh, rows_to_armhole_end+1, shoulder_start_row-1, rows_total, "пройма")
 
     # Горловина
     actions += calc_round_neckline(neck_st, neck_rows, neck_start_row, rows_total)
 
-    # Скос плеча (начинается после проймы)
+    # Скос плеча
     actions += slope_shoulder(st_shldr, shoulder_start_row, rows_total, rows_total)
 
     st.subheader("📋 Инструкция")
