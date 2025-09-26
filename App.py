@@ -68,9 +68,12 @@ def sym_decreases(total_sub, start_row, end_row, rows_total, label):
 # Скос плеча
 # -----------------------------
 def slope_shoulder(total_stitches, start_row, end_row, rows_total):
-    if total_stitches <= 0: return []
-    rows = allowed_even_rows(start_row, end_row, rows_total)
-    if not rows: return []
+    if total_stitches <= 0:
+        return []
+    # ✅ используем end_row как есть, без ограничения rows_total - 2
+    rows = allowed_even_rows(start_row, end_row, end_row)
+    if not rows:
+        return []
     steps = len(rows)
     base = total_stitches // steps
     rem  = total_stitches % steps
