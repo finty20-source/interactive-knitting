@@ -365,7 +365,7 @@ if st.button("🔄 Рассчитать"):
     # боковые прибавки/убавки
     delta_bottom = st_chest - st_hip
     if delta_bottom > 0:
-        actions += sym_increases(delta_bottom, 6, rows_bottom, rows_total, "бок")
+        actions_back += sym_increases(delta_bottom, 6, rows_bottom, rows_total, "бок")
     elif delta_bottom < 0:
         actions_back += sym_decreases(-delta_bottom, 6, rows_to_armhole_end, rows_total, "бок")
 
