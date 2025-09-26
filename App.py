@@ -146,23 +146,37 @@ def section_tags(row, rows_to_armhole_end, neck_start_row, shoulder_start_row):
 
 def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, shoulder_start_row):
     merged = defaultdict(list)
-for r in rows_sorted:
-    if r > prev:
-        seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
-        if prev == r-1:
-            table_rows.append((str(prev), "Прямо", seg))   # 🔥 одно число
-        else:
-            table_rows.append((f"{prev}-{r-1}", "Прямо", seg))
-    table_rows.append((str(r), "; ".join(merged[r]),
-                       section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
-    prev = r + 1
+def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, shoulder_start_row):
+    merged = defaultdict(list)
+    for row, note in actions:
+        merged[row].append(note)
 
-if prev <= rows_total:
-    seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
-    if prev == rows_total:
-        table_rows.append((str(prev), "Прямо", seg))       # 🔥 одно число
+    rows_sorted = sorted(merged.keys())
+    table_rows = []
+    prev = 1
+
+    if not rows_sorted:
+        # если нет никаких действий — всё полотно вяжется прямо
+        seg = section_tags(1, rows_to_armhole_end, neck_start_row, shoulder_start_row)
+        table_rows.append((f"1-{rows_total}", "Прямо", seg))
     else:
-        table_rows.append((f"{prev}-{rows_total}", "Прямо", seg))
+        for r in rows_sorted:
+            if r > prev:
+                seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
+                if prev == r-1:
+                    table_rows.append((str(prev), "Прямо", seg))
+                else:
+                    table_rows.append((f"{prev}-{r-1}", "Прямо", seg))
+            table_rows.append((str(r), "; ".join(merged[r]),
+                               section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
+            prev = r + 1
+
+        if prev <= rows_total:
+            seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
+            if prev == rows_total:
+                table_rows.append((str(prev), "Прямо", seg))
+            else:
+                table_rows.append((f"{prev}-{rows_total}", "Прямо", seg))
 
     df = pd.DataFrame(table_rows, columns=["Ряды", "Действия", "Сегмент"])
     st.dataframe(df, use_container_width=True, hide_index=True)
