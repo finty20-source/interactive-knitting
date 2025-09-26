@@ -136,11 +136,15 @@ def calc_round_neckline(total_stitches, total_rows, start_row, rows_total, strai
 # -----------------------------
 def section_tags(row, rows_to_armhole_end, neck_start_row, shoulder_start_row):
     tags = []
-    if row <= rows_to_armhole_end: tags.append("Низ изделия")
-    if rows_to_armhole_end+1 <= row < shoulder_start_row: tags.append("Пройма")
-    if neck_start_row and row >= neck_start_row: tags.append("Горловина")
-    if shoulder_start_row and row >= shoulder_start_row: tags.append("Скос плеча")
-    return ", ".join(tags) if tags else "—"
+    if row <= rows_to_armhole_end:
+        tags.append("Низ изделия")
+    if row > rows_to_armhole_end:
+        tags.append("Пройма")
+    if neck_start_row and row >= neck_start_row:
+        tags.append("Горловина")
+    if shoulder_start_row and row >= shoulder_start_row:
+        tags.append("Скос плеча")
+    return " + ".join(tags) if tags else "—"
 
 def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, shoulder_start_row):
     merged = defaultdict(list)
