@@ -99,9 +99,9 @@ def calc_round_neckline(total_stitches, total_rows, start_row, rows_total, last_
     straight_rows = max(2, int(round(total_rows * 0.20)))
 
     # конец по глубине
-    neck_end_by_depth = start_row + total_rows - 1 - straight_rows
+    neck_end_by_depth = start_row + total_rows - 1
     # реальный конец = не дальше, чем последний ряд плеча
-    effective_end = min(neck_end_by_depth, last_row)
+    effective_end = min(neck_end_by_depth, last_row)  # всегда до плеча
 
     rows = allowed_even_rows(start_row, effective_end, rows_total)
     if not rows:
