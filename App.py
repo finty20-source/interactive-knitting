@@ -407,6 +407,15 @@ if st.button("🔄 Рассчитать"):
     actions_back = merge_actions(actions_back, rows_total)
 
     make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row, last_row)
+    # -----------------------------
+    # сохраняем результаты для PDF
+    # -----------------------------
+    st.session_state.actions = actions
+    st.session_state.actions_back = actions_back
+    st.session_state.st_hip = st_hip
+    st.session_state.rows_total = rows_total
+    st.session_state.rows_bottom = rows_bottom
+
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib import colors
