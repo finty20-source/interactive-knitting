@@ -183,12 +183,15 @@ if st.button("🔄 Рассчитать"):
     elif delta_bottom < 0:
         actions += sym_decreases(-delta_bottom, 6, rows_to_armhole_end, rows_total, "бок")
 
-    # Пройма (только до плеча)
-    delta_armh = st_shoul - st_chest
-    if delta_armh > 0:
-        actions += sym_increases(delta_armh, rows_to_armhole_end+1, shoulder_start_row-1, rows_total, "пройма")
-    elif delta_armh < 0:
-        actions += sym_decreases(-delta_armh, rows_to_armhole_end+1, shoulder_start_row-1, rows_total, "пройма")
+    # Пройма (разница между грудью и плечами)
+delta_armh = st_shoul - st_chest
+armhole_start_row = rows_to_armhole_end + 1
+armhole_end_row   = neck_start_row - 1   # ⚡️ до горловины, не доходя до плеча
+
+if delta_armh > 0:
+    actions += sym_increases(delta_armh, armhole_start_row, armhole_end_row, rows_total, "пройма")
+elif delta_armh < 0:
+    actions += sym_decreases(-delta_armh, armhole_start_row, armhole_end_row, rows_total, "пройма")
 
     # Горловина
     actions += calc_round_neckline(neck_st, neck_rows, neck_start_row, rows_total)
