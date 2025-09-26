@@ -136,12 +136,16 @@ def calc_round_neckline(total_stitches, total_rows, start_row, rows_total, strai
 # -----------------------------
 def section_tags(row, rows_to_armhole_end, neck_start_row, shoulder_start_row):
     tags = []
+    # 1) низ до линии проймы
     if row <= rows_to_armhole_end:
         tags.append("Низ изделия")
-    if row > rows_to_armhole_end:
+    # 2) пройма между линией проймы и началом плеча (включая пересечения)
+    if rows_to_armhole_end < row < shoulder_start_row:
         tags.append("Пройма")
+    # 3) горловина может начаться до плеча и продолжаться на плечах
     if neck_start_row and row >= neck_start_row:
         tags.append("Горловина")
+    # 4) скос плеча — самый верх, не пересекается с проймой
     if shoulder_start_row and row >= shoulder_start_row:
         tags.append("Скос плеча")
     return " + ".join(tags) if tags else "—"
@@ -156,17 +160,17 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
     prev = 1
 
     for r in rows_sorted:
-        if r > prev:
-            # прямые ряды → тоже определяем сегмент
-            seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
-            table_rows.append((f"{prev}-{r-1}", "Прямо", seg))
-        table_rows.append((str(r), "; ".join(merged[r]),
+        # внутри make_table_full
+if r > prev:
+    seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
+    table_rows.append((f"{prev}-{r-1}", "Прямо", seg))
+    
                            section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
         prev = r + 1
 
-    if prev <= rows_total:
-        seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
-        table_rows.append((f"{prev}-{rows_total}", "Прямо", seg))
+if prev <= rows_total:
+    seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
+    table_rows.append((f"{prev}-{rows_total}", "Прямо", seg))
 
     df = pd.DataFrame(table_rows, columns=["Ряды", "Действия", "Сегмент"])
     st.dataframe(df, use_container_width=True, hide_index=True)
