@@ -153,13 +153,16 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
 
     for r in rows_sorted:
         if r > prev:
-            table_rows.append((f"{prev}-{r-1}", "Прямо", "—"))
+            # прямые ряды → тоже определяем сегмент
+            seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
+            table_rows.append((f"{prev}-{r-1}", "Прямо", seg))
         table_rows.append((str(r), "; ".join(merged[r]),
                            section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
         prev = r + 1
 
     if prev <= rows_total:
-        table_rows.append((f"{prev}-{rows_total}", "Прямо", "—"))
+        seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
+        table_rows.append((f"{prev}-{rows_total}", "Прямо", seg))
 
     df = pd.DataFrame(table_rows, columns=["Ряды", "Действия", "Сегмент"])
     st.dataframe(df, use_container_width=True, hide_index=True)
