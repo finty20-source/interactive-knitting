@@ -415,6 +415,12 @@ if st.button("🔄 Рассчитать"):
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
     from reportlab.lib import colors
     from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+
+    # Подключаем шрифт DejaVuSans (он поддерживает кириллицу)
+    pdfmetrics.registerFont(TTFont("DejaVuSans", "DejaVuSans.ttf"))
+
     import io
 
     if st.button("⬇️ Скачать PDF с инструкцией"):
