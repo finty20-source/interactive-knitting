@@ -146,8 +146,6 @@ def section_tags(row, rows_to_armhole_end, neck_start_row, shoulder_start_row):
 
 def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, shoulder_start_row):
     merged = defaultdict(list)
-def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, shoulder_start_row):
-    merged = defaultdict(list)
     for row, note in actions:
         merged[row].append(note)
 
@@ -156,7 +154,6 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
     prev = 1
 
     if not rows_sorted:
-        # если нет никаких действий — всё полотно вяжется прямо
         seg = section_tags(1, rows_to_armhole_end, neck_start_row, shoulder_start_row)
         table_rows.append((f"1-{rows_total}", "Прямо", seg))
     else:
@@ -219,7 +216,21 @@ if st.button("🔄 Рассчитать"):
         st.error("⚠️ Пожалуйста, заполните все поля числами")
         st.stop()
 
-    # ключевые ряды
+    # пересчёт в петли/ряды
+    st_hip     = cm_to_st(hip_cm, density_st)        # низ
+    st_chest   = cm_to_st(chest_cm, density_st)      # грудь
+    rows_total = cm_to_rows(length_cm, density_row)
+    rows_armh  = cm_to_rows(armhole_depth_cm, density_row)
+
+    neck_st    = cm_to_st(neck_width_cm, density_st)
+    neck_rows_front  = cm_to_rows(neck_depth_cm, density_row)
+    neck_rows_back   = cm_to_rows(neck_depth_back_cm, density_row)
+
+    st_shldr   = cm_to_st(shoulder_len_cm, density_st)
+    rows_slope = cm_to_rows(shoulder_slope_cm, density_row)
+
+    st_shoulders = 2 * st_shldr + neck_st   # скрытая ширина по плечам
+
     rows_to_armhole_end = rows_total - rows_armh
     armhole_start_row   = rows_to_armhole_end + 1
     shoulder_start_row  = rows_total - rows_slope + 1
@@ -227,23 +238,13 @@ if st.button("🔄 Рассчитать"):
 
     neck_start_row_front= rows_total - neck_rows_front + 1
     neck_start_row_back = rows_total - neck_rows_back + 1
-    
-if st.button("🔄 Рассчитать"):
-    try:
-        density_st  = int(density_st_str)
-        density_row = int(density_row_str)
-        hip_cm      = int(hip_cm_str)
-        chest_cm    = int(chest_cm_str)
-        length_cm   = int(length_cm_str)
-        armhole_depth_cm = int(armhole_depth_cm_str)
-        neck_width_cm     = int(neck_width_cm_str)
-        neck_depth_cm     = int(neck_depth_cm_str)
-        neck_depth_back_cm= int(neck_depth_back_cm_str)
-        shoulder_len_cm   = int(shoulder_len_cm_str)
-        shoulder_slope_cm = int(shoulder_slope_cm_str)
-    except:
-        st.error("⚠️ Пожалуйста, заполните все поля числами")
-        st.stop()
+
+    # -----------------------------
+    # 📊 Сводка
+    # -----------------------------
+    st.subheader("📊 Сводка")
+    st.write(f"- Набрать петель: **{st_hip}**")
+    st.write(f"- Всего рядов: **{rows_total}**")
 
     # ----- ПЕРЕД -----
     st.subheader("📋 Инструкция для переда")
