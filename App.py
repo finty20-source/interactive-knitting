@@ -473,4 +473,54 @@ if st.button("🔄 Рассчитать"):
             file_name="vyazanie_instructions.pdf",
             mime="application/pdf"
         )
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+import io
+
+if st.session_state.actions and st.session_state.actions_back:
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    elements = []
+    styles = getSampleStyleSheet()
+
+    elements.append(Paragraph("🧶 Интерактивное вязание — инструкция", styles['Heading1']))
+    elements.append(Spacer(1, 12))
+
+    # сводка
+    summary_data = [
+        ["Набрать петель", str(st.session_state.st_hip)],
+        ["Всего рядов", str(st.session_state.rows_total)],
+        ["Низ (до проймы и плеча)", str(st.session_state.rows_bottom)]
+    ]
+    table = Table(summary_data, hAlign="LEFT")
+    table.setStyle(TableStyle([("GRID", (0,0), (-1,-1), 0.5, colors.grey)]))
+    elements.append(table)
+    elements.append(Spacer(1, 12))
+
+    # перед
+    elements.append(Paragraph("Инструкция для переда", styles['Heading2']))
+    tbl_front = Table([[r, n] for r, n in st.session_state.actions], hAlign="LEFT")
+    tbl_front.setStyle(TableStyle([("GRID", (0,0), (-1,-1), 0.5, colors.grey)]))
+    elements.append(tbl_front)
+    elements.append(Spacer(1, 12))
+
+    # спинка
+    elements.append(Paragraph("Инструкция для спинки", styles['Heading2']))
+    tbl_back = Table([[r, n] for r, n in st.session_state.actions_back], hAlign="LEFT")
+    tbl_back.setStyle(TableStyle([("GRID", (0,0), (-1,-1), 0.5, colors.grey)]))
+    elements.append(tbl_back)
+
+    doc.build(elements)
+    buffer.seek(0)
+
+    st.download_button(
+        label="📥 Скачать PDF",
+        data=buffer,
+        file_name="vyazanie_instructions.pdf",
+        mime="application/pdf"
+    )
+else:
+    st.info("Сначала нажмите '🔄 Рассчитать'")
 
