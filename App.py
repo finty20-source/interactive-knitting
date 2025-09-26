@@ -298,203 +298,16 @@ shoulder_slope_cm_str  = st.text_input("Скос плеча (см)", placeholder
 # -----------------------------
 # Кнопка расчёта
 # -----------------------------
-if st.button("🔄 Рассчитать"):
-    try:
-        density_st         = float(density_st_str.replace(",", ".")) if density_st_str else 0
-        density_row        = float(density_row_str.replace(",", ".")) if density_row_str else 0
-        hip_cm             = float(hip_cm_str.replace(",", ".")) if hip_cm_str else 0
-        chest_cm           = float(chest_cm_str.replace(",", ".")) if chest_cm_str else 0
-        length_cm          = float(length_cm_str.replace(",", ".")) if length_cm_str else 0
-        armhole_depth_cm   = float(armhole_depth_cm_str.replace(",", ".")) if armhole_depth_cm_str else 0
-        neck_width_cm      = float(neck_width_cm_str.replace(",", ".")) if neck_width_cm_str else 0
-        neck_depth_cm      = float(neck_depth_cm_str.replace(",", ".")) if neck_depth_cm_str else 0
-        neck_depth_back_cm = float(neck_depth_back_cm_str.replace(",", ".")) if neck_depth_back_cm_str else 0
-        shoulder_len_cm    = float(shoulder_len_cm_str.replace(",", ".")) if shoulder_len_cm_str else 0
-        shoulder_slope_cm  = float(shoulder_slope_cm_str.replace(",", ".")) if shoulder_slope_cm_str else 0
-    except:
-        st.error("⚠️ Пожалуйста, заполните все поля числами (можно с точкой или запятой)")
-        st.stop()
-
-    # -----------------------------
-    # Пересчёт в петли/ряды
-    # -----------------------------
-    st_hip     = cm_to_st(hip_cm, density_st)        # низ
-    st_chest   = cm_to_st(chest_cm, density_st)      # грудь
-    rows_total = cm_to_rows(length_cm, density_row)  # вся высота изделия
-    rows_armh  = cm_to_rows(armhole_depth_cm, density_row)  # глубина проймы
-
-    neck_st    = cm_to_st(neck_width_cm, density_st)
-    neck_rows_front  = cm_to_rows(neck_depth_cm, density_row)
-    neck_rows_back   = cm_to_rows(neck_depth_back_cm, density_row)
-
-    st_shldr   = cm_to_st(shoulder_len_cm, density_st)
-    rows_slope = cm_to_rows(shoulder_slope_cm, density_row)
-
-    st_shoulders = 2 * st_shldr + neck_st   # скрытая ширина по плечам
-
-    # низ = вся высота - пройма - плечо
-    rows_bottom = rows_total - rows_armh - rows_slope
-
-    # начало и конец этапов
-    armhole_start_row   = rows_bottom + 1
-    shoulder_start_row  = rows_total - rows_slope + 1
-    armhole_end_row     = shoulder_start_row - 1
-
-    # последний ряд изделия (окончание плеча)
-    last_row = shoulder_start_row + rows_slope - 1
-
-    # начало горловин
-    neck_start_row_front = rows_total - neck_rows_front + 1
-    neck_start_row_back  = rows_total - neck_rows_back + 1
-
-    # -----------------------------
-    # 📊 Сводка
-    # -----------------------------
-    st.subheader("📊 Сводка")
-    st.write(f"- Набрать петель: **{st_hip}**")
-    st.write(f"- Всего рядов: **{rows_total}**")
-
-    # -----------------------------
-    # 📋 Перед
-    # -----------------------------
-    st.subheader("📋 Инструкция для переда")
-    actions = []
-
-    delta_bottom = st_chest - st_hip
-    if delta_bottom > 0:
-        actions += sym_increases(delta_bottom, 6, rows_bottom, rows_total, "бок")
-    elif delta_bottom < 0:
-        actions += sym_decreases(-delta_bottom, 6, rows_bottom, rows_total, "бок")
-
-    # пройма
-    actions += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
-
-    # горловина (20% прямых рядов по умолчанию)
-    actions += calc_round_neckline(neck_st, neck_rows_front, neck_start_row_front, rows_total, last_row)
-
-    # плечо
-    actions += slope_shoulder(st_shldr, shoulder_start_row, last_row, rows_total)
-
-    # ⚡️ не дать горловине и плечу совпасть в один ряд
-    actions = merge_actions(actions, rows_total)
-
-    make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, last_row)
-
-    # -----------------------------
-    # 📋 Спинка
-    # -----------------------------
-    st.subheader("📋 Инструкция для спинки")
-    actions_back = []
-
-    delta_bottom = st_chest - st_hip
-    if delta_bottom > 0:
-        actions_back += sym_increases(delta_bottom, 6, rows_bottom, rows_total, "бок")
-    elif delta_bottom < 0:
-        actions_back += sym_decreases(-delta_bottom, 6, rows_bottom, rows_total, "бок")
-
-    # пройма
-    actions_back += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
-
-    # горловина спинки: прямые ряды = 2%
-    actions_back += calc_round_neckline(
-        neck_st, neck_rows_back, neck_start_row_back, rows_total, last_row, straight_percent=0.02
-    )
-
-    # плечо
-    actions_back += slope_shoulder(st_shldr, shoulder_start_row, last_row, rows_total)
-
-    # ⚡️ не дать горловине и плечу совпасть
-    actions_back = merge_actions(actions_back, rows_total)
-
-    make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row, last_row)
-
-    # -----------------------------
-    # Экспорт в PDF
-    # -----------------------------
-    from reportlab.lib.pagesizes import A4
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-    from reportlab.lib import colors
-    from reportlab.lib.styles import getSampleStyleSheet
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
-
-    # Подключаем шрифт DejaVuSans (он поддерживает кириллицу)
-    pdfmetrics.registerFont(TTFont("DejaVuSans", "DejaVuSans.ttf"))
-
-    import io
-
-    if st.button("⬇️ Скачать PDF с инструкцией"):
-        buffer = io.BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=A4)
-        elements = []
-        styles = getSampleStyleSheet()
-
-        # Заголовок
-        elements.append(Paragraph("🧶 Интерактивное вязание — инструкция", styles['Heading1']))
-        elements.append(Spacer(1, 12))
-
-        # Сводка
-        summary_data = [
-            ["Набрать петель", str(st_hip)],
-            ["Всего рядов", str(rows_total)],
-            ["Низ (до проймы и плеча)", str(rows_bottom)]
-        ]
-        table = Table(summary_data, hAlign="LEFT")
-        table.setStyle(TableStyle([
-            ("GRID", (0,0), (-1,-1), 0.5, colors.grey),
-            ("BACKGROUND", (0,0), (-1,0), colors.lightgrey),
-        ]))
-        elements.append(table)
-        elements.append(Spacer(1, 12))
-
-        # Вспомогательная функция — таблички
-        def add_table(actions, title, neck_start_row, shoulder_start_row):
-            elements.append(Paragraph(title, styles['Heading2']))
-            merged = defaultdict(list)
-            for row, note in actions:
-                merged[row].append(note)
-            rows_sorted = sorted(merged.keys())
-            table_data = [["Ряды", "Действия"]]
-            for r in rows_sorted:
-                table_data.append([str(r), "; ".join(merged[r])])
-            tbl = Table(table_data, hAlign="LEFT")
-            tbl.setStyle(TableStyle([
-                ("GRID", (0,0), (-1,-1), 0.5, colors.grey),
-                ("BACKGROUND", (0,0), (-1,0), colors.lightgrey),
-            ]))
-            elements.append(tbl)
-            elements.append(Spacer(1, 12))
-
-        # Таблицы
-        add_table(actions, "Инструкция для переда", neck_start_row_front, shoulder_start_row)
-        add_table(actions_back, "Инструкция для спинки", neck_start_row_back, shoulder_start_row)
-
-        # Сборка PDF
-        doc.build(elements)
-        buffer.seek(0)
-
-        st.download_button(
-            label="📥 Скачать PDF",
-            data=buffer,
-            file_name="vyazanie_instructions.pdf",
-            mime="application/pdf"
-        )
-            # -----------------------------
-    # Сохраняем данные в session_state
-    # -----------------------------
-    st.session_state.actions = actions
-    st.session_state.actions_back = actions_back
-    st.session_state.st_hip = st_hip
-    st.session_state.rows_total = rows_total
-    st.session_state.rows_bottom = rows_bottom
-
-
-
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 import io
+
+# Подключаем шрифт DejaVuSans (файл DejaVuSans.ttf нужно положить рядом с App.py)
+pdfmetrics.registerFont(TTFont("DejaVuSans", "DejaVuSans.ttf"))
 
 if st.session_state.actions and st.session_state.actions_back:
     buffer = io.BytesIO()
@@ -502,33 +315,52 @@ if st.session_state.actions and st.session_state.actions_back:
     elements = []
     styles = getSampleStyleSheet()
 
+    # Используем кириллический шрифт во всех стилях
+    styles["Normal"].fontName = "DejaVuSans"
+    styles["Heading1"].fontName = "DejaVuSans"
+    styles["Heading2"].fontName = "DejaVuSans"
+
+    # Заголовок
     elements.append(Paragraph("🧶 Интерактивное вязание — инструкция", styles['Heading1']))
     elements.append(Spacer(1, 12))
 
-    # сводка
+    # Сводка
     summary_data = [
         ["Набрать петель", str(st.session_state.st_hip)],
         ["Всего рядов", str(st.session_state.rows_total)],
         ["Низ (до проймы и плеча)", str(st.session_state.rows_bottom)]
     ]
     table = Table(summary_data, hAlign="LEFT")
-    table.setStyle(TableStyle([("GRID", (0,0), (-1,-1), 0.5, colors.grey)]))
+    table.setStyle(TableStyle([
+        ("FONTNAME", (0,0), (-1,-1), "DejaVuSans"),
+        ("FONTSIZE", (0,0), (-1,-1), 10),
+        ("GRID", (0,0), (-1,-1), 0.5, colors.grey),
+    ]))
     elements.append(table)
     elements.append(Spacer(1, 12))
 
-    # перед
+    # Таблица переда
     elements.append(Paragraph("Инструкция для переда", styles['Heading2']))
     tbl_front = Table([[r, n] for r, n in st.session_state.actions], hAlign="LEFT")
-    tbl_front.setStyle(TableStyle([("GRID", (0,0), (-1,-1), 0.5, colors.grey)]))
+    tbl_front.setStyle(TableStyle([
+        ("FONTNAME", (0,0), (-1,-1), "DejaVuSans"),
+        ("FONTSIZE", (0,0), (-1,-1), 10),
+        ("GRID", (0,0), (-1,-1), 0.5, colors.grey),
+    ]))
     elements.append(tbl_front)
     elements.append(Spacer(1, 12))
 
-    # спинка
+    # Таблица спинки
     elements.append(Paragraph("Инструкция для спинки", styles['Heading2']))
     tbl_back = Table([[r, n] for r, n in st.session_state.actions_back], hAlign="LEFT")
-    tbl_back.setStyle(TableStyle([("GRID", (0,0), (-1,-1), 0.5, colors.grey)]))
+    tbl_back.setStyle(TableStyle([
+        ("FONTNAME", (0,0), (-1,-1), "DejaVuSans"),
+        ("FONTSIZE", (0,0), (-1,-1), 10),
+        ("GRID", (0,0), (-1,-1), 0.5, colors.grey),
+    ]))
     elements.append(tbl_back)
 
+    # Формируем PDF
     doc.build(elements)
     buffer.seek(0)
 
@@ -540,4 +372,3 @@ if st.session_state.actions and st.session_state.actions_back:
     )
 else:
     st.info("Сначала нажмите '🔄 Рассчитать'")
-
