@@ -128,7 +128,7 @@ def calc_round_neckline(total_stitches, total_rows, start_row, rows_total, strai
     for r, v in zip(chosen, parts):
         actions.append((r, f"-{v} п. горловина (каждое плечо)"))
     return actions
-    
+
 # -----------------------------
 # Пройма (круглая)
 # -----------------------------
@@ -143,7 +143,6 @@ def calc_round_armhole(st_chest, st_shoulders, start_row, shoulder_start_row, ro
     if total_rows <= 0:
         return []
 
-    # глубина (углубление внутрь)
     depth_armhole_st = int(round(st_chest * depth_percent))
     st_mid = st_chest - depth_armhole_st
 
@@ -158,7 +157,7 @@ def calc_round_armhole(st_chest, st_shoulders, start_row, shoulder_start_row, ro
     if delta1 < 0:
         actions += sym_decreases(-delta1, start_row, start_row+rows_smooth, rows_total, "пройма")
 
-    # Этап 2: прямо (st_mid) — действий нет
+    # Этап 2: прямо (st_mid)
 
     # Этап 3: прибавки наружу (mid → плечи)
     delta2 = st_shoulders - st_mid
@@ -166,6 +165,45 @@ def calc_round_armhole(st_chest, st_shoulders, start_row, shoulder_start_row, ro
         actions += sym_increases(delta2, start_row+rows_smooth+rows_hold, end_row, rows_total, "пройма")
 
     return actions
+
+# -----------------------------
+# Слияние действий (горловина + плечо)
+# -----------------------------
+def merge_actions(actions, rows_total):
+    """Правила:
+       - убавки горловины и плеча не могут быть в одном ряду
+       - горловина остаётся на месте (чётные ряды)
+       - скос плеча переносим на ряд выше (даже если он нечётный)"""
+    merged = defaultdict(list)
+    for row, note in actions:
+        merged[row].append(note)
+
+    fixed = []
+    used_rows = set()
+
+    for row in sorted(merged.keys()):
+        notes = merged[row]
+
+        if ("горловина" in " ".join(notes)) and ("скос плеча" in " ".join(notes)):
+            shoulder_notes = [n for n in notes if "скос плеча" in n]
+            neck_notes     = [n for n in notes if "горловина" in n]
+
+            fixed.append((row, "; ".join(neck_notes)))
+            used_rows.add(row)
+
+            new_row = row - 1 if row > 1 else row + 1
+            while new_row in used_rows and new_row < rows_total:
+                new_row += 1
+
+            for n in shoulder_notes:
+                fixed.append((new_row, n))
+                used_rows.add(new_row)
+
+        else:
+            fixed.append((row, "; ".join(notes)))
+            used_rows.add(row)
+
+    return fixed
 
 # -----------------------------
 # Таблица + сегменты
