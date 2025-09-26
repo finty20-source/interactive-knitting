@@ -324,7 +324,7 @@ if st.button("🔄 Рассчитать"):
     armhole_depth_cm_str,
     neck_width_cm_str, neck_depth_cm_str, neck_depth_back_cm_str,
     shoulder_len_cm_str, shoulder_slope_cm_str
-]
+    ]
 
 if not all(inputs):
     st.error("⚠️ Заполните все поля перед расчётом")
