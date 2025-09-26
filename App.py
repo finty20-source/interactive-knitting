@@ -226,6 +226,19 @@ def merge_actions(actions, rows_total):
 # -----------------------------
 # Таблица + сегменты
 # -----------------------------
+def section_tags(row, rows_to_armhole_end, neck_start_row, shoulder_start_row):
+    tags = []
+    if row <= rows_to_armhole_end:
+        tags.append("Низ изделия")
+    if rows_to_armhole_end < row < shoulder_start_row:
+        tags.append("Пройма")
+    if neck_start_row and row >= neck_start_row:
+        tags.append("Горловина")
+    if shoulder_start_row and row >= shoulder_start_row:
+        tags.append("Скос плеча")
+    return " + ".join(tags) if tags else "—"
+
+
 def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, shoulder_start_row, last_row, key):
     merged = defaultdict(list)
     for row, note in actions:
