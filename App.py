@@ -349,20 +349,20 @@ if st.button("🔄 Рассчитать"):
     # боковые прибавки/убавки
     delta_bottom = st_chest - st_hip
     if delta_bottom > 0:
-    actions += sym_increases(delta_bottom, 6, rows_bottom, rows_total, "бок")
+        actions += sym_increases(delta_bottom, 6, rows_bottom, rows_total, "бок")
     elif delta_bottom < 0:
-    actions += sym_decreases(-delta_bottom, 6, rows_bottom, rows_total, "бок")
+        actions += sym_decreases(-delta_bottom, 6, rows_bottom, rows_total, "бок")
 
-    # пройма
-    actions += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
+        # пройма
+        actions += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
 
-    # горловина
-    actions += calc_round_neckline(neck_st, neck_rows_front, neck_start_row_front, rows_total, last_row)
+        # горловина
+        actions += calc_round_neckline(neck_st, neck_rows_front, neck_start_row_front, rows_total, last_row)
 
-    # плечо
-    actions += slope_shoulder(st_shldr, shoulder_start_row, last_row, rows_total)
+        # плечо
+        actions += slope_shoulder(st_shldr, shoulder_start_row, last_row, rows_total)
 
-    make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row)
+        make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row)
 
     # -----------------------------
     # 📋 Спинка
