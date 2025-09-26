@@ -132,7 +132,7 @@ def calc_round_neckline(total_stitches, total_rows, start_row, rows_total, strai
 # -----------------------------
 # Пройма (круглая)
 # -----------------------------
-def calc_round_armhole(st_chest, st_shoulders, start_row, shoulder_start_row, rows_total, depth_percent=0.1, hold_percent=0.1):
+def calc_round_armhole(st_chest, st_shoulders, start_row, shoulder_start_row, rows_total, depth_percent=0.1, hold_percent=0.05):
     """Скруглённая пройма: убавки внутрь, потом прямо, потом плавный выход к плечам.
        Пройма всегда заканчивается до начала плеча."""
     if shoulder_start_row <= start_row:
