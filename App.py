@@ -259,6 +259,13 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
 # -----------------------------
 st.header("Перед / Спинка")
 
+chest_cm_str = st.text_input("Ширина детали по груди (см)", placeholder="введите ширину")
+
+try:
+    chest_cm = float(chest_cm_str.replace(",", ".")) if chest_cm_str else 0
+except ValueError:
+    chest_cm = 0
+
 density_st_str  = st.text_input("Плотность: петли в 10 см", placeholder="введите плотность")
 density_row_str = st.text_input("Плотность: ряды в 10 см",  placeholder="введите плотность")
 
