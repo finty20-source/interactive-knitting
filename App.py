@@ -13,56 +13,23 @@ def cm_to_st(cm, dens_st):
 
 def cm_to_rows(cm, dens_row):
     return int(round((cm/10.0)*dens_row))
-
 # -----------------------------
-# Рядовые правила
+# Рядовые правила (с доработкой)
 # -----------------------------
-def allowed_even_rows(start_row: int, end_row: int, rows_total: int):
-    """Разрешённые чётные ряды: ≥6 и ≤ rows_total-2."""
+def allowed_even_rows(start_row: int, end_row: int, rows_total: int, force_last=False):
+    """Разрешённые чётные ряды: ≥6 и ≤ end_row.
+       По умолчанию обрезает по rows_total-2,
+       но если force_last=True — идёт до самого конца (end_row)."""
     if end_row is None:
         end_row = rows_total
-    high = min(end_row, rows_total - 2)
+    high = end_row if force_last else min(end_row, rows_total - 2)
     if high < 6:
         return []
     start = max(6, start_row)
     if start % 2 == 1: start += 1
-    if high  % 2 == 1: high  -= 1
+    if high % 2 == 1: high -= 1
     return list(range(start, high + 1, 2)) if start <= high else []
 
-def split_total_into_steps(total: int, steps: int):
-    if total <= 0 or steps <= 0:
-        return []
-    steps = min(steps, total)
-    base = total // steps
-    rem  = total % steps
-    return [base + (1 if i < rem else 0) for i in range(steps)]
-
-# -----------------------------
-# Симметричные прибавки / убавки
-# -----------------------------
-def sym_increases(total_add, start_row, end_row, rows_total, label):
-    if total_add <= 0: return []
-    if total_add % 2 == 1: total_add += 1
-    rows = allowed_even_rows(start_row, end_row, rows_total)
-    if not rows: return []
-    per_side = total_add // 2
-    steps = min(len(rows), per_side)
-    parts = split_total_into_steps(per_side, steps)
-    idxs = np.linspace(0, len(rows)-1, num=steps, dtype=int)
-    chosen = [rows[i] for i in idxs]
-    return [(r, f"+{v} п. {label} (с каждой стороны)") for r, v in zip(chosen, parts)]
-
-def sym_decreases(total_sub, start_row, end_row, rows_total, label):
-    if total_sub <= 0: return []
-    if total_sub % 2 == 1: total_sub += 1
-    rows = allowed_even_rows(start_row, end_row, rows_total)
-    if not rows: return []
-    per_side = total_sub // 2
-    steps = min(len(rows), per_side)
-    parts = split_total_into_steps(per_side, steps)
-    idxs = np.linspace(0, len(rows)-1, num=steps, dtype=int)
-    chosen = [rows[i] for i in idxs]
-    return [(r, f"-{v} п. {label} (с каждой стороны)") for r, v in zip(chosen, parts)]
 
 # -----------------------------
 # Скос плеча
@@ -70,8 +37,8 @@ def sym_decreases(total_sub, start_row, end_row, rows_total, label):
 def slope_shoulder(total_stitches, start_row, end_row, rows_total):
     if total_stitches <= 0:
         return []
-    # ✅ используем end_row как есть, без ограничения rows_total - 2
-    rows = allowed_even_rows(start_row, end_row, end_row)
+    # ⚡️ теперь доходит до самого конца
+    rows = allowed_even_rows(start_row, end_row, rows_total, force_last=True)
     if not rows:
         return []
     steps = len(rows)
@@ -83,49 +50,60 @@ def slope_shoulder(total_stitches, start_row, end_row, rows_total):
         actions.append((r, f"-{dec} п. скос плеча (одно плечо)"))
     return actions
 
+
 # -----------------------------
 # Горловина (круглая)
 # -----------------------------
-def calc_round_neckline(total_stitches, total_rows, start_row, rows_total, last_row):
-    """Округлая горловина: первая убавка 60%, потом равномерные.
-       Последние 20% глубины идут прямо. Горловина может пересекаться с плечом."""
+def calc_round_neckline(total_stitches, total_rows, start_row, rows_total, last_row, straight_percent=0.20):
     if total_stitches <= 0 or total_rows <= 0:
         return []
 
-    # первый шаг ~60%
+    # первый шаг = 60% и доводим до чётного
     first_dec = int(round(total_stitches * 0.60))
     if first_dec % 2 == 1:
         first_dec += 1
     rest = total_stitches - first_dec
 
-    # прямые ряды = 20% от глубины горловины
-    straight_rows = max(2, int(round(total_rows * 0.20)))
+    # прямые ряды перед концом = % от всей глубины
+    straight_rows = max(2, int(round(total_rows * straight_percent)))
+    neck_end_by_depth = start_row + total_rows - 1 - straight_rows
 
-    # конец по глубине
-    neck_end_by_depth = start_row + total_rows - 1
-    # реальный конец = не дальше, чем последний ряд плеча
-    effective_end = min(neck_end_by_depth, last_row)  # всегда до плеча
+    # ⚡️ ограничиваем по last_row
+    effective_end = min(neck_end_by_depth, last_row)
 
-    rows = allowed_even_rows(start_row, effective_end, rows_total)
+    rows = allowed_even_rows(start_row, effective_end, rows_total, force_last=True)
     if not rows:
         return []
 
     actions = []
-    # первая крупная убавка
     actions.append((rows[0], f"-{first_dec} п. горловина (середина, разделение на плечи)"))
 
     if rest <= 0 or len(rows) == 1:
         return actions
 
-    # остальные убавки
     rest_rows = rows[1:]
     steps = min(len(rest_rows), rest)
     idxs   = np.linspace(0, len(rest_rows)-1, num=steps, dtype=int)
     chosen = [rest_rows[i] for i in idxs]
     parts  = split_total_into_steps(rest, steps)
 
+    # последние шаги делаем по 1 петле (если надо)
+    if steps >= 2:
+        over = 0
+        for i in [steps-2, steps-1]:
+            if parts[i] > 1:
+                over += parts[i] - 1
+                parts[i] = 1
+        jmax = max(1, steps-2)
+        j = 0
+        while over > 0 and jmax > 0:
+            parts[j % jmax] += 1
+            over -= 1
+            j += 1
+
     for r, v in zip(chosen, parts):
         actions.append((r, f"-{v} п. горловина (каждое плечо)"))
+
     return actions
 
 # -----------------------------
