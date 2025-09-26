@@ -226,19 +226,7 @@ def merge_actions(actions, rows_total):
 # -----------------------------
 # Таблица + сегменты
 # -----------------------------
-def section_tags(row, rows_to_armhole_end, neck_start_row, shoulder_start_row):
-    tags = []
-    if row <= rows_to_armhole_end:
-        tags.append("Низ изделия")
-    if rows_to_armhole_end < row < shoulder_start_row:
-        tags.append("Пройма")
-    if neck_start_row and row >= neck_start_row:
-        tags.append("Горловина")
-    if shoulder_start_row and row >= shoulder_start_row:
-        tags.append("Скос плеча")
-    return " + ".join(tags) if tags else "—"
-
-def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, shoulder_start_row, last_row):
+def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, shoulder_start_row, last_row, key):
     merged = defaultdict(list)
     for row, note in actions:
         merged[row].append(note)
@@ -269,6 +257,10 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
         else:
             table_rows.append((f"{prev}-{last_row}", "Прямо", seg))
 
+    # сохраняем таблицу в session_state (для PDF)
+    st.session_state[key] = table_rows
+
+    # показываем в приложении
     df = pd.DataFrame(table_rows, columns=["Ряды", "Действия", "Сегмент"])
     st.dataframe(df, use_container_width=True, hide_index=True)
 
@@ -391,7 +383,7 @@ if st.button("🔄 Рассчитать"):
     # ⚡️ не дать горловине и плечу совпасть в один ряд
     actions = merge_actions(actions, rows_total)
 
-    make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, last_row)
+    make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, last_row, key="table_front")
 
     # -----------------------------
     # 📋 Спинка
@@ -419,7 +411,7 @@ if st.button("🔄 Рассчитать"):
     # ⚡️ не дать горловине и плечу совпасть
     actions_back = merge_actions(actions_back, rows_total)
 
-    make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row, last_row)
+    make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row, last_row, key="table_back")
     # -----------------------------
     # сохраняем результаты для PDF
     # -----------------------------
@@ -472,7 +464,7 @@ if st.session_state.actions and st.session_state.actions_back:
 
     # Таблица переда
     elements.append(Paragraph("Инструкция для переда", styles['Heading2']))
-    tbl_front = Table([[r, n] for r, n in st.session_state.actions], hAlign="LEFT")
+    tbl_front = Table(st.session_state.table_front, hAlign="LEFT")
     tbl_front.setStyle(TableStyle([
         ("FONTNAME", (0,0), (-1,-1), "DejaVuSans"),
         ("FONTSIZE", (0,0), (-1,-1), 10),
@@ -483,7 +475,7 @@ if st.session_state.actions and st.session_state.actions_back:
 
     # Таблица спинки
     elements.append(Paragraph("Инструкция для спинки", styles['Heading2']))
-    tbl_back = Table([[r, n] for r, n in st.session_state.actions_back], hAlign="LEFT")
+    tbl_back = Table(st.session_state.table_back, hAlign="LEFT")
     tbl_back.setStyle(TableStyle([
         ("FONTNAME", (0,0), (-1,-1), "DejaVuSans"),
         ("FONTSIZE", (0,0), (-1,-1), 10),
