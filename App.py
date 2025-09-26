@@ -293,13 +293,6 @@ if st.button("🔄 Рассчитать"):
         st.error("⚠️ Пожалуйста, заполните все поля числами (можно с точкой или запятой)")
         st.stop()
 
-    # 🚨 Проверка что все поля заполнены
-    if not all([density_st, density_row, hip_cm, chest_cm, length_cm,
-                armhole_depth_cm, neck_width_cm, neck_depth_cm,
-                neck_depth_back_cm, shoulder_len_cm, shoulder_slope_cm]):
-        st.error("⚠️ Заполните все поля перед расчётом")
-        st.stop()
-
     # -----------------------------
     # Пересчёт в петли/ряды
     # -----------------------------
@@ -338,6 +331,7 @@ if st.button("🔄 Рассчитать"):
     st.subheader("📊 Сводка")
     st.write(f"- Набрать петель: **{st_hip}**")
     st.write(f"- Всего рядов: **{rows_total}**")
+    st.write(f"- Низ (до проймы и плеча): **{rows_bottom} рядов**")
 
     # -----------------------------
     # 📋 Перед
@@ -345,23 +339,22 @@ if st.button("🔄 Рассчитать"):
     st.subheader("📋 Инструкция для переда")
     actions = []
 
-    # боковые прибавки/убавки
     delta_bottom = st_chest - st_hip
     if delta_bottom > 0:
         actions += sym_increases(delta_bottom, 6, rows_bottom, rows_total, "бок")
     elif delta_bottom < 0:
         actions += sym_decreases(-delta_bottom, 6, rows_bottom, rows_total, "бок")
 
-        # пройма
-        actions += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
+    # пройма
+    actions += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
 
-        # горловина
-        actions += calc_round_neckline(neck_st, neck_rows_front, neck_start_row_front, rows_total, last_row)
+    # горловина
+    actions += calc_round_neckline(neck_st, neck_rows_front, neck_start_row_front, rows_total, last_row)
 
-        # плечо
-        actions += slope_shoulder(st_shldr, shoulder_start_row, last_row, rows_total)
+    # плечо
+    actions += slope_shoulder(st_shldr, shoulder_start_row, last_row, rows_total)
 
-        make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row)
+    make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row)
 
     # -----------------------------
     # 📋 Спинка
@@ -369,23 +362,22 @@ if st.button("🔄 Рассчитать"):
     st.subheader("📋 Инструкция для спинки")
     actions_back = []
 
-    # боковые прибавки/убавки
     delta_bottom = st_chest - st_hip
     if delta_bottom > 0:
         actions_back += sym_increases(delta_bottom, 6, rows_bottom, rows_total, "бок")
     elif delta_bottom < 0:
         actions_back += sym_decreases(-delta_bottom, 6, rows_bottom, rows_total, "бок")
 
-        # пройма
-        actions_back += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
+    # пройма
+    actions_back += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
 
-        # горловина (для спинки глубина меньше)
-        actions_back += calc_round_neckline(neck_st, neck_rows_back, neck_start_row_back, rows_total, last_row)
+    # горловина (для спинки глубина меньше)
+    actions_back += calc_round_neckline(neck_st, neck_rows_back, neck_start_row_back, rows_total, last_row)
 
-        # плечо
-        actions_back += slope_shoulder(st_shldr, shoulder_start_row, last_row, rows_total)
+    # плечо
+    actions_back += slope_shoulder(st_shldr, shoulder_start_row, last_row, rows_total)
 
-        # объединяем, чтобы горловина и плечо не совпадали
-        actions_back = merge_actions(actions_back, rows_total)
+    # объединяем, чтобы горловина и плечо не совпадали
+    actions_back = merge_actions(actions_back, rows_total)
 
-        make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row)
+    make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row)
