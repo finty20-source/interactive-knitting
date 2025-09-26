@@ -231,42 +231,49 @@ neck_start_row_back  = rows_total - neck_rows_back + 1
     st.write(f"- Авто ширина по плечам: **{st_shoulders} п.** (= 2×{st_shldr} + {neck_st})")
 
     # ----- ПЕРЕД -----
-    st.subheader("📋 Инструкция для переда")
-    actions = []
-    delta_bottom = st_chest - st_hip
-    if delta_bottom > 0:
-        actions += sym_increases(delta_bottom, 6, rows_to_armhole_end, rows_total, "бок")
-    elif delta_bottom < 0:
-        actions += sym_decreases(-delta_bottom, 6, rows_to_armhole_end, rows_total, "бок")
+# ----- ПЕРЕД -----
+st.subheader("📋 Инструкция для переда")
+actions = []
 
-    delta_armh = st_shoulders - st_chest
-    armhole_start_row = rows_to_armhole_end + 1
-    armhole_end_row   = shoulder_start_row - 1
-    if delta_armh > 0:
-        actions += sym_increases(delta_armh, armhole_start_row, armhole_end_row, rows_total, "пройма")
-    elif delta_armh < 0:
-        actions += sym_decreases(-delta_armh, armhole_start_row, armhole_end_row, rows_total, "пройма")
+# боковые до линии проймы (если нужен не-прямой силуэт — st_chest можно менять)
+delta_bottom = st_chest - st_hip
+if delta_bottom > 0:
+    actions += sym_increases(delta_bottom, 6, rows_to_armhole_end, rows_total, "бок")
+elif delta_bottom < 0:
+    actions += sym_decreases(-delta_bottom, 6, rows_to_armhole_end, rows_total, "бок")
 
-    actions += calc_round_neckline(neck_st, neck_rows_front, neck_start_row_front, rows_total)
-    actions += slope_shoulder(st_shldr, shoulder_start_row, rows_total, rows_total)
+# пройма: от armhole_start до armhole_end (вплоть до плеча),
+# будет пересекаться с горловиной, если та начнётся раньше плеча
+delta_armh = st_shoulders - st_chest
+if delta_armh > 0:
+    actions += sym_increases(delta_armh, armhole_start_row, armhole_end_row, rows_total, "пройма")
+elif delta_armh < 0:
+    actions += sym_decreases(-delta_armh, armhole_start_row, armhole_end_row, rows_total, "пройма")
 
-    make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row_front, shoulder_start_row)
+# горловина (внутри верхней зоны; может идти параллельно пройме и/или плечу)
+actions += calc_round_neckline(neck_st, neck_rows_front, neck_start_row_front, rows_total)
 
-    # ----- СПИНКА -----
-    st.subheader("📋 Инструкция для спинки")
-    actions_back = []
-    delta_bottom = st_chest - st_hip
-    if delta_bottom > 0:
-        actions_back += sym_increases(delta_bottom, 6, rows_to_armhole_end, rows_total, "бок")
-    elif delta_bottom < 0:
-        actions_back += sym_decreases(-delta_bottom, 6, rows_to_armhole_end, rows_total, "бок")
+# скос плеча (верх — не пересекается с проймой, но пересекается с горловиной)
+actions += slope_shoulder(st_shldr, shoulder_start_row, rows_total, rows_total)
 
-    if delta_armh > 0:
-        actions_back += sym_increases(delta_armh, armhole_start_row, armhole_end_row, rows_total, "пройма")
-    elif delta_armh < 0:
-        actions_back += sym_decreases(-delta_armh, armhole_start_row, armhole_end_row, rows_total, "пройма")
+make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row_front, shoulder_start_row)
 
-    actions_back += calc_round_neckline(neck_st, neck_rows_back, neck_start_row_back, rows_total)
-    actions_back += slope_shoulder(st_shldr, shoulder_start_row, rows_total, rows_total)
+# ----- СПИНКА -----
+st.subheader("📋 Инструкция для спинки")
+actions_back = []
 
-    make_table_full(actions_back, rows_total, rows_to_armhole_end, neck_start_row_back, shoulder_start_row)
+delta_bottom = st_chest - st_hip
+if delta_bottom > 0:
+    actions_back += sym_increases(delta_bottom, 6, rows_to_armhole_end, rows_total, "бок")
+elif delta_bottom < 0:
+    actions_back += sym_decreases(-delta_bottom, 6, rows_to_armhole_end, rows_total, "бок")
+
+if delta_armh > 0:
+    actions_back += sym_increases(delta_armh, armhole_start_row, armhole_end_row, rows_total, "пройма")
+elif delta_armh < 0:
+    actions_back += sym_decreases(-delta_armh, armhole_start_row, armhole_end_row, rows_total, "пройма")
+
+actions_back += calc_round_neckline(neck_st, neck_rows_back, neck_start_row_back, rows_total)
+actions_back += slope_shoulder(st_shldr, shoulder_start_row, rows_total, rows_total)
+
+make_table_full(actions_back, rows_total, rows_to_armhole_end, neck_start_row_back, shoulder_start_row)
