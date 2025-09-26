@@ -259,47 +259,45 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
 # -----------------------------
 st.header("Перед / Спинка")
 
-chest_cm_str = st.text_input("Ширина детали по груди (см)", placeholder="введите ширину")
+density_st_str   = st.text_input("Плотность: петли в 10 см", placeholder="введите плотность")
+density_row_str  = st.text_input("Плотность: ряды в 10 см",  placeholder="введите плотность")
 
-try:
-    chest_cm = float(chest_cm_str.replace(",", ".")) if chest_cm_str else 0
-except ValueError:
-    chest_cm = 0
+hip_cm_str       = st.text_input("Ширина низа детали (см)", placeholder="введите ширину")
+chest_cm_str     = st.text_input("Ширина детали по груди (см)", placeholder="введите ширину")
+length_cm_str    = st.text_input("Длина изделия (см)", placeholder="введите длину")
 
-density_st_str  = st.text_input("Плотность: петли в 10 см", placeholder="введите плотность")
-density_row_str = st.text_input("Плотность: ряды в 10 см",  placeholder="введите плотность")
+armhole_depth_cm_str   = st.text_input("Длина проймы (см)", placeholder="введите длину")
 
-hip_cm_str      = st.text_input("Ширина низа детали (см)", placeholder="введите ширину")
-chest_cm_str    = st.text_input("Ширина детали по груди (см)", placeholder="введите ширину")
-length_cm_str   = st.text_input("Длина изделия (см)", placeholder="введите длину")
+neck_width_cm_str      = st.text_input("Ширина горловины (см)", placeholder="введите ширину")
+neck_depth_cm_str      = st.text_input("Глубина горловины спереди (см)", placeholder="введите глубину")
+neck_depth_back_cm_str = st.text_input("Глубина горловины спинки (см)", placeholder="введите глубину")
 
-armhole_depth_cm_str = st.text_input("Длина проймы (см)", placeholder="введите длину")
+shoulder_len_cm_str    = st.text_input("Длина плеча (см)", placeholder="введите длину")
+shoulder_slope_cm_str  = st.text_input("Скос плеча (см)", placeholder="введите высоту")
 
-neck_width_cm_str     = st.text_input("Ширина горловины (см)", placeholder="введите ширину")
-neck_depth_cm_str     = st.text_input("Глубина горловины спереди (см)", placeholder="введите глубину")
-neck_depth_back_cm_str= st.text_input("Глубина горловины спинки (см)", placeholder="введите глубину")
-
-shoulder_len_cm_str   = st.text_input("Длина плеча (см)", placeholder="введите длину")
-shoulder_slope_cm_str = st.text_input("Скос плеча (см)", placeholder="введите высоту")
-
+# -----------------------------
+# Кнопка расчёта
+# -----------------------------
 if st.button("🔄 Рассчитать"):
     try:
-        density_st        = float(density_st_str.replace(",", "."))
-        density_row       = float(density_row_str.replace(",", "."))
-        hip_cm            = float(hip_cm_str.replace(",", "."))
-        chest_cm          = float(chest_cm_str.replace(",", "."))
-        length_cm         = float(length_cm_str.replace(",", "."))
-        armhole_depth_cm  = float(armhole_depth_cm_str.replace(",", "."))
-        neck_width_cm     = float(neck_width_cm_str.replace(",", "."))
-        neck_depth_cm     = float(neck_depth_cm_str.replace(",", "."))
-        neck_depth_back_cm= float(neck_depth_back_cm_str.replace(",", "."))
-        shoulder_len_cm   = float(shoulder_len_cm_str.replace(",", "."))
-        shoulder_slope_cm = float(shoulder_slope_cm_str.replace(",", "."))
+        density_st         = float(density_st_str.replace(",", "."))
+        density_row        = float(density_row_str.replace(",", "."))
+        hip_cm             = float(hip_cm_str.replace(",", "."))
+        chest_cm           = float(chest_cm_str.replace(",", "."))
+        length_cm          = float(length_cm_str.replace(",", "."))
+        armhole_depth_cm   = float(armhole_depth_cm_str.replace(",", "."))
+        neck_width_cm      = float(neck_width_cm_str.replace(",", "."))
+        neck_depth_cm      = float(neck_depth_cm_str.replace(",", "."))
+        neck_depth_back_cm = float(neck_depth_back_cm_str.replace(",", "."))
+        shoulder_len_cm    = float(shoulder_len_cm_str.replace(",", "."))
+        shoulder_slope_cm  = float(shoulder_slope_cm_str.replace(",", "."))
     except:
         st.error("⚠️ Пожалуйста, заполните все поля числами (можно с точкой или запятой)")
         st.stop()
 
-    # пересчёт в петли/ряды
+    # -----------------------------
+    # Пересчёт в петли/ряды
+    # -----------------------------
     st_hip     = cm_to_st(hip_cm, density_st)        # низ
     st_chest   = cm_to_st(chest_cm, density_st)      # грудь
     rows_total = cm_to_rows(length_cm, density_row)
@@ -319,8 +317,8 @@ if st.button("🔄 Рассчитать"):
     shoulder_start_row  = rows_total - rows_slope + 1
     armhole_end_row     = shoulder_start_row - 1
 
-    neck_start_row_front= rows_total - neck_rows_front + 1
-    neck_start_row_back = rows_total - neck_rows_back + 1
+    neck_start_row_front = rows_total - neck_rows_front + 1
+    neck_start_row_back  = rows_total - neck_rows_back + 1
 
     # -----------------------------
     # 📊 Сводка
