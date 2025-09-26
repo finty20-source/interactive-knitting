@@ -293,39 +293,41 @@ neck_depth_cm_str      = st.text_input("Глубина горловины спе
 neck_depth_back_cm_str = st.text_input("Глубина горловины спинки (см)", placeholder="введите глубину")
 
 shoulder_len_cm_str    = st.text_input("Длина плеча (см)", placeholder="введите длину")
-shoulder_slope_cm_str  = st.text_input("Скос плеча (см)", placeholder="введите высоту")
-
+shoulder_slope_cm_str  = st.text_input("Скос плеча (см)", placeholder="введите 
 # -----------------------------
 # Кнопка расчёта
 # -----------------------------
 if st.button("🔄 Рассчитать"):
-    try:
-        density_st         = float(density_st_str.replace(",", ".")) if density_st_str else 0
-        density_row        = float(density_row_str.replace(",", ".")) if density_row_str else 0
-        hip_cm             = float(hip_cm_str.replace(",", ".")) if hip_cm_str else 0
-        chest_cm           = float(chest_cm_str.replace(",", ".")) if chest_cm_str else 0
-        length_cm          = float(length_cm_str.replace(",", ".")) if length_cm_str else 0
-        armhole_depth_cm   = float(armhole_depth_cm_str.replace(",", ".")) if armhole_depth_cm_str else 0
-        neck_width_cm      = float(neck_width_cm_str.replace(",", ".")) if neck_width_cm_str else 0
-        neck_depth_cm      = float(neck_depth_cm_str.replace(",", ".")) if neck_depth_cm_str else 0
-        neck_depth_back_cm = float(neck_depth_back_cm_str.replace(",", ".")) if neck_depth_back_cm_str else 0
-        shoulder_len_cm    = float(shoulder_len_cm_str.replace(",", ".")) if shoulder_len_cm_str else 0
-        shoulder_slope_cm  = float(shoulder_slope_cm_str.replace(",", ".")) if shoulder_slope_cm_str else 0
-    except:
-        st.error("⚠️ Пожалуйста, заполните все поля числами (можно с точкой или запятой)")
-        st.stop()
-
     # -----------------------------
     # Проверка заполненности всех полей
     # -----------------------------
     inputs = [
-    density_st_str, density_row_str,
-    hip_cm_str, chest_cm_str, length_cm_str,
-    armhole_depth_cm_str,
-    neck_width_cm_str, neck_depth_cm_str, neck_depth_back_cm_str,
-    shoulder_len_cm_str, shoulder_slope_cm_str
+        density_st_str, density_row_str,
+        hip_cm_str, chest_cm_str, length_cm_str,
+        armhole_depth_cm_str,
+        neck_width_cm_str, neck_depth_cm_str, neck_depth_back_cm_str,
+        shoulder_len_cm_str, shoulder_slope_cm_str
     ]
 
+    if not all(inputs):
+        st.error("⚠️ Заполните все поля перед расчётом")
+        st.stop()
+
+    try:
+        density_st         = float(density_st_str.replace(",", "."))
+        density_row        = float(density_row_str.replace(",", "."))
+        hip_cm             = float(hip_cm_str.replace(",", "."))
+        chest_cm           = float(chest_cm_str.replace(",", "."))
+        length_cm          = float(length_cm_str.replace(",", "."))
+        armhole_depth_cm   = float(armhole_depth_cm_str.replace(",", "."))
+        neck_width_cm      = float(neck_width_cm_str.replace(",", "."))
+        neck_depth_cm      = float(neck_depth_cm_str.replace(",", "."))
+        neck_depth_back_cm = float(neck_depth_back_cm_str.replace(",", "."))
+        shoulder_len_cm    = float(shoulder_len_cm_str.replace(",", "."))
+        shoulder_slope_cm  = float(shoulder_slope_cm_str.replace(",", "."))
+    except:
+        st.error("⚠️ Пожалуйста, вводите только числа (можно с точкой или запятой)")
+        st.stop()
 if not all(inputs):
     st.error("⚠️ Заполните все поля перед расчётом")
     st.stop()
