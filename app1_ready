@@ -6,6 +6,16 @@ from collections import defaultdict
 st.title("🧶 Интерактивное вязание — полный расчёт модели")
 
 # -----------------------------
+# Сессия для хранения результатов
+# -----------------------------
+if "actions" not in st.session_state:
+    st.session_state.actions = []
+    st.session_state.actions_back = []
+    st.session_state.st_hip = 0
+    st.session_state.rows_total = 0
+    st.session_state.rows_bottom = 0
+
+# -----------------------------
 # Конвертеры
 # -----------------------------
 def cm_to_st(cm, dens_st):
@@ -233,26 +243,25 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
     for row, note in actions:
         merged[row].append(note)
 
-    rows_sorted = sorted(merged.keys())
     table_rows = []
     prev = 1
 
-    if not rows_sorted:
-        seg = section_tags(1, rows_to_armhole_end, neck_start_row, shoulder_start_row)
-        table_rows.append((f"1-{last_row}", "Прямо", seg))
-    else:
-        for r in rows_sorted:
-            if r > prev:
+    # проходим по всем рядам до конца
+    for r in range(1, last_row + 1):
+        if r in merged:
+            # сначала закрываем прямой участок, если он был
+            if prev < r:
                 seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
-                if prev == r-1:
+                if prev == r - 1:
                     table_rows.append((str(prev), "Прямо", seg))
                 else:
                     table_rows.append((f"{prev}-{r-1}", "Прямо", seg))
-            table_rows.append((str(r), "; ".join(merged[r]),
-                               section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
+            # потом добавляем действие
+            seg = section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)
+            table_rows.append((str(r), "; ".join(merged[r]), seg))
             prev = r + 1
 
-    # конец = последний ряд скоса плеча
+    # если после последнего действия остались прямые ряды
     if prev <= last_row:
         seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
         if prev == last_row:
@@ -262,7 +271,6 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
 
     df = pd.DataFrame(table_rows, columns=["Ряды", "Действия", "Сегмент"])
     st.dataframe(df, use_container_width=True, hide_index=True)
-
 
 # -----------------------------
 # Ввод параметров
@@ -289,20 +297,35 @@ shoulder_slope_cm_str  = st.text_input("Скос плеча (см)", placeholder
 # Кнопка расчёта
 # -----------------------------
 if st.button("🔄 Рассчитать"):
+    # -----------------------------
+    # Проверка заполненности всех полей
+    # -----------------------------
+    inputs = [
+        density_st_str, density_row_str,
+        hip_cm_str, chest_cm_str, length_cm_str,
+        armhole_depth_cm_str,
+        neck_width_cm_str, neck_depth_cm_str, neck_depth_back_cm_str,
+        shoulder_len_cm_str, shoulder_slope_cm_str
+    ]
+
+    if not all(inputs):
+        st.error("⚠️ Заполните все поля перед расчётом")
+        st.stop()
+
     try:
-        density_st         = float(density_st_str.replace(",", ".")) if density_st_str else 0
-        density_row        = float(density_row_str.replace(",", ".")) if density_row_str else 0
-        hip_cm             = float(hip_cm_str.replace(",", ".")) if hip_cm_str else 0
-        chest_cm           = float(chest_cm_str.replace(",", ".")) if chest_cm_str else 0
-        length_cm          = float(length_cm_str.replace(",", ".")) if length_cm_str else 0
-        armhole_depth_cm   = float(armhole_depth_cm_str.replace(",", ".")) if armhole_depth_cm_str else 0
-        neck_width_cm      = float(neck_width_cm_str.replace(",", ".")) if neck_width_cm_str else 0
-        neck_depth_cm      = float(neck_depth_cm_str.replace(",", ".")) if neck_depth_cm_str else 0
-        neck_depth_back_cm = float(neck_depth_back_cm_str.replace(",", ".")) if neck_depth_back_cm_str else 0
-        shoulder_len_cm    = float(shoulder_len_cm_str.replace(",", ".")) if shoulder_len_cm_str else 0
-        shoulder_slope_cm  = float(shoulder_slope_cm_str.replace(",", ".")) if shoulder_slope_cm_str else 0
+        density_st         = float(density_st_str.replace(",", "."))
+        density_row        = float(density_row_str.replace(",", "."))
+        hip_cm             = float(hip_cm_str.replace(",", "."))
+        chest_cm           = float(chest_cm_str.replace(",", "."))
+        length_cm          = float(length_cm_str.replace(",", "."))
+        armhole_depth_cm   = float(armhole_depth_cm_str.replace(",", "."))
+        neck_width_cm      = float(neck_width_cm_str.replace(",", "."))
+        neck_depth_cm      = float(neck_depth_cm_str.replace(",", "."))
+        neck_depth_back_cm = float(neck_depth_back_cm_str.replace(",", "."))
+        shoulder_len_cm    = float(shoulder_len_cm_str.replace(",", "."))
+        shoulder_slope_cm  = float(shoulder_slope_cm_str.replace(",", "."))
     except:
-        st.error("⚠️ Пожалуйста, заполните все поля числами (можно с точкой или запятой)")
+        st.error("⚠️ Пожалуйста, вводите только числа (можно с точкой или запятой)")
         st.stop()
 
     # -----------------------------
@@ -397,3 +420,86 @@ if st.button("🔄 Рассчитать"):
     actions_back = merge_actions(actions_back, rows_total)
 
     make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row, last_row)
+    # -----------------------------
+    # сохраняем результаты для PDF
+    # -----------------------------
+    st.session_state.actions = actions
+    st.session_state.actions_back = actions_back
+    st.session_state.st_hip = st_hip
+    st.session_state.rows_total = rows_total
+    st.session_state.rows_bottom = rows_bottom
+
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+import io
+
+# Подключаем шрифт DejaVuSans (файл DejaVuSans.ttf нужно положить рядом с App.py)
+pdfmetrics.registerFont(TTFont("DejaVuSans", "DejaVuSans.ttf"))
+
+if st.session_state.actions and st.session_state.actions_back:
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    elements = []
+    styles = getSampleStyleSheet()
+
+    # Используем кириллический шрифт во всех стилях
+    styles["Normal"].fontName = "DejaVuSans"
+    styles["Heading1"].fontName = "DejaVuSans"
+    styles["Heading2"].fontName = "DejaVuSans"
+
+    # Заголовок
+    elements.append(Paragraph("🧶 Интерактивное вязание — инструкция", styles['Heading1']))
+    elements.append(Spacer(1, 12))
+
+    # Сводка
+    summary_data = [
+        ["Набрать петель", str(st.session_state.st_hip)],
+        ["Всего рядов", str(st.session_state.rows_total)],
+        ["Низ (до проймы и плеча)", str(st.session_state.rows_bottom)]
+    ]
+    table = Table(summary_data, hAlign="LEFT")
+    table.setStyle(TableStyle([
+        ("FONTNAME", (0,0), (-1,-1), "DejaVuSans"),
+        ("FONTSIZE", (0,0), (-1,-1), 10),
+        ("GRID", (0,0), (-1,-1), 0.5, colors.grey),
+    ]))
+    elements.append(table)
+    elements.append(Spacer(1, 12))
+
+    # Таблица переда
+    elements.append(Paragraph("Инструкция для переда", styles['Heading2']))
+    tbl_front = Table([[r, n] for r, n in st.session_state.actions], hAlign="LEFT")
+    tbl_front.setStyle(TableStyle([
+        ("FONTNAME", (0,0), (-1,-1), "DejaVuSans"),
+        ("FONTSIZE", (0,0), (-1,-1), 10),
+        ("GRID", (0,0), (-1,-1), 0.5, colors.grey),
+    ]))
+    elements.append(tbl_front)
+    elements.append(Spacer(1, 12))
+
+    # Таблица спинки
+    elements.append(Paragraph("Инструкция для спинки", styles['Heading2']))
+    tbl_back = Table([[r, n] for r, n in st.session_state.actions_back], hAlign="LEFT")
+    tbl_back.setStyle(TableStyle([
+        ("FONTNAME", (0,0), (-1,-1), "DejaVuSans"),
+        ("FONTSIZE", (0,0), (-1,-1), 10),
+        ("GRID", (0,0), (-1,-1), 0.5, colors.grey),
+    ]))
+    elements.append(tbl_back)
+
+    # Формируем PDF
+    doc.build(elements)
+    buffer.seek(0)
+
+    st.download_button(
+        label="📥 Скачать PDF",
+        data=buffer,
+        file_name="vyazanie_instructions.pdf",
+        mime="application/pdf"
+    )
+else:
+    st.info("Сначала нажмите '🔄 Рассчитать'")
