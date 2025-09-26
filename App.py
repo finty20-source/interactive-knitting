@@ -397,3 +397,70 @@ if st.button("🔄 Рассчитать"):
     actions_back = merge_actions(actions_back, rows_total)
 
     make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row, last_row)
+
+    # -----------------------------
+    # Экспорт в PDF
+    # -----------------------------
+    from reportlab.lib.pagesizes import A4
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet
+    import io
+
+    if st.button("⬇️ Скачать PDF с инструкцией"):
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        elements = []
+        styles = getSampleStyleSheet()
+
+        # Заголовок
+        elements.append(Paragraph("🧶 Интерактивное вязание — инструкция", styles['Heading1']))
+        elements.append(Spacer(1, 12))
+
+        # Сводка
+        summary_data = [
+            ["Набрать петель", str(st_hip)],
+            ["Всего рядов", str(rows_total)],
+            ["Низ (до проймы и плеча)", str(rows_bottom)]
+        ]
+        table = Table(summary_data, hAlign="LEFT")
+        table.setStyle(TableStyle([
+            ("GRID", (0,0), (-1,-1), 0.5, colors.grey),
+            ("BACKGROUND", (0,0), (-1,0), colors.lightgrey),
+        ]))
+        elements.append(table)
+        elements.append(Spacer(1, 12))
+
+        # Вспомогательная функция — таблички
+        def add_table(actions, title, neck_start_row, shoulder_start_row):
+            elements.append(Paragraph(title, styles['Heading2']))
+            merged = defaultdict(list)
+            for row, note in actions:
+                merged[row].append(note)
+            rows_sorted = sorted(merged.keys())
+            table_data = [["Ряды", "Действия"]]
+            for r in rows_sorted:
+                table_data.append([str(r), "; ".join(merged[r])])
+            tbl = Table(table_data, hAlign="LEFT")
+            tbl.setStyle(TableStyle([
+                ("GRID", (0,0), (-1,-1), 0.5, colors.grey),
+                ("BACKGROUND", (0,0), (-1,0), colors.lightgrey),
+            ]))
+            elements.append(tbl)
+            elements.append(Spacer(1, 12))
+
+        # Таблицы
+        add_table(actions, "Инструкция для переда", neck_start_row_front, shoulder_start_row)
+        add_table(actions_back, "Инструкция для спинки", neck_start_row_back, shoulder_start_row)
+
+        # Сборка PDF
+        doc.build(elements)
+        buffer.seek(0)
+
+        st.download_button(
+            label="📥 Скачать PDF",
+            data=buffer,
+            file_name="vyazanie_instructions.pdf",
+            mime="application/pdf"
+        )
+
