@@ -243,26 +243,25 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
     for row, note in actions:
         merged[row].append(note)
 
-    rows_sorted = sorted(merged.keys())
     table_rows = []
     prev = 1
 
-    if not rows_sorted:
-        seg = section_tags(1, rows_to_armhole_end, neck_start_row, shoulder_start_row)
-        table_rows.append((f"1-{last_row}", "Прямо", seg))
-    else:
-        for r in rows_sorted:
-            if r > prev:
+    # проходим по всем рядам до конца
+    for r in range(1, last_row + 1):
+        if r in merged:
+            # сначала закрываем прямой участок, если он был
+            if prev < r:
                 seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
-                if prev == r-1:
+                if prev == r - 1:
                     table_rows.append((str(prev), "Прямо", seg))
                 else:
                     table_rows.append((f"{prev}-{r-1}", "Прямо", seg))
-            table_rows.append((str(r), "; ".join(merged[r]),
-                               section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
+            # потом добавляем действие
+            seg = section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)
+            table_rows.append((str(r), "; ".join(merged[r]), seg))
             prev = r + 1
 
-    # конец = последний ряд скоса плеча
+    # если после последнего действия остались прямые ряды
     if prev <= last_row:
         seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
         if prev == last_row:
@@ -272,7 +271,6 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
 
     df = pd.DataFrame(table_rows, columns=["Ряды", "Действия", "Сегмент"])
     st.dataframe(df, use_container_width=True, hide_index=True)
-
 
 # -----------------------------
 # Ввод параметров
