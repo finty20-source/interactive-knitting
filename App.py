@@ -343,7 +343,6 @@ if st.button("🔄 Рассчитать"):
     st.subheader("📊 Сводка")
     st.write(f"- Набрать петель: **{st_hip}**")
     st.write(f"- Всего рядов: **{rows_total}**")
-    st.write(f"- Низ (до проймы и плеча): **{rows_bottom} рядов**")
 
     # -----------------------------
     # 📋 Перед
@@ -360,16 +359,16 @@ if st.button("🔄 Рассчитать"):
     # пройма
     actions += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
 
-    # горловина
-actions += calc_round_neckline(neck_st, neck_rows_front, neck_start_row_front, rows_total, last_row)
+    # горловина (20% прямых рядов по умолчанию)
+    actions += calc_round_neckline(neck_st, neck_rows_front, neck_start_row_front, rows_total, last_row)
 
-# плечо
-actions += slope_shoulder(st_shldr, shoulder_start_row, last_row, rows_total)
+    # плечо
+    actions += slope_shoulder(st_shldr, shoulder_start_row, last_row, rows_total)
 
-# ⚡️ новый шаг
-actions = merge_actions(actions, rows_total)
+    # ⚡️ не дать горловине и плечу совпасть в один ряд
+    actions = merge_actions(actions, rows_total)
 
-make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, last_row)
+    make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, last_row)
 
     # -----------------------------
     # 📋 Спинка
@@ -386,20 +385,15 @@ make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder
     # пройма
     actions_back += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
 
-    # горловина (для спинки глубина меньше, прямые ряды = 2%)
+    # горловина спинки: прямые ряды = 2%
     actions_back += calc_round_neckline(
-        neck_st,
-        neck_rows_back,
-        neck_start_row_back,
-        rows_total,
-        last_row,
-        straight_percent=0.02
+        neck_st, neck_rows_back, neck_start_row_back, rows_total, last_row, straight_percent=0.02
     )
 
     # плечо
     actions_back += slope_shoulder(st_shldr, shoulder_start_row, last_row, rows_total)
 
-    # объединяем, чтобы горловина и плечо не совпадали
+    # ⚡️ не дать горловине и плечу совпасть
     actions_back = merge_actions(actions_back, rows_total)
 
-    make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row)
+    make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row, last_row)
