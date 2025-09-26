@@ -39,7 +39,6 @@ def split_total_into_steps(total: int, steps: int):
 # Прибавки / убавки
 # -----------------------------
 def sym_increases(total_add: int, start_row: int, end_row: int, rows_total: int, label: str):
-    """Симметричные прибавки: одинаково слева и справа."""
     if total_add <= 0: return []
     if total_add % 2 == 1: total_add += 1
     rows = allowed_even_rows(start_row, end_row, rows_total)
@@ -52,7 +51,6 @@ def sym_increases(total_add: int, start_row: int, end_row: int, rows_total: int,
     return [(r, f"+{v} п. {label} слева и +{v} п. {label} справа") for r, v in zip(chosen, parts)]
 
 def sym_decreases(total_sub: int, start_row: int, end_row: int, rows_total: int, label: str):
-    """Симметричные убавки: одинаково слева и справа."""
     if total_sub <= 0: return []
     if total_sub % 2 == 1: total_sub += 1
     rows = allowed_even_rows(start_row, end_row, rows_total)
@@ -65,7 +63,6 @@ def sym_decreases(total_sub: int, start_row: int, end_row: int, rows_total: int,
     return [(r, f"-{v} п. {label} слева и -{v} п. {label} справа") for r, v in zip(chosen, parts)]
 
 def slope_shoulder(total_stitches: int, start_row: int, end_row: int, rows_total: int):
-    """Скос плеча: равномерно по рядам, остаток в начале."""
     if total_stitches <= 0: return []
     rows = allowed_even_rows(start_row, end_row, rows_total)
     if not rows: return []
@@ -79,7 +76,6 @@ def slope_shoulder(total_stitches: int, start_row: int, end_row: int, rows_total
     return actions
 
 def calc_round_neckline(total_stitches: int, total_rows: int, start_row: int, rows_total: int, straight_percent: float = 0.05):
-    """Круглая горловина: первый шаг 60%, верхние 5% глубины — прямо, последние 2 убавки ≤1 петли."""
     if total_stitches <= 0 or total_rows <= 0: return []
     first_dec = int(round(total_stitches * 0.60))
     rest = total_stitches - first_dec
@@ -121,7 +117,7 @@ def section_tags(row, rows_to_armhole_end, neck_start_row, shoulder_start_row):
     tags = []
     if row <= rows_to_armhole_end:
         tags.append("Низ изделия")
-    if row >= rows_to_armhole_end + 1:
+    if rows_to_armhole_end+1 <= row < shoulder_start_row:
         tags.append("Пройма")
     if neck_start_row and row >= neck_start_row:
         tags.append("Горловина")
@@ -187,17 +183,17 @@ if st.button("🔄 Рассчитать"):
     elif delta_bottom < 0:
         actions += sym_decreases(-delta_bottom, 6, rows_to_armhole_end, rows_total, "бок")
 
-    # Пройма
+    # Пройма (только до плеча)
     delta_armh = st_shoul - st_chest
     if delta_armh > 0:
-        actions += sym_increases(delta_armh, rows_to_armhole_end+1, rows_total, rows_total, "пройма")
+        actions += sym_increases(delta_armh, rows_to_armhole_end+1, shoulder_start_row-1, rows_total, "пройма")
     elif delta_armh < 0:
-        actions += sym_decreases(-delta_armh, rows_to_armhole_end+1, rows_total, rows_total, "пройма")
+        actions += sym_decreases(-delta_armh, rows_to_armhole_end+1, shoulder_start_row-1, rows_total, "пройма")
 
     # Горловина
     actions += calc_round_neckline(neck_st, neck_rows, neck_start_row, rows_total)
 
-    # Скос плеча
+    # Скос плеча (начинается после проймы)
     actions += slope_shoulder(st_shldr, shoulder_start_row, rows_total, rows_total)
 
     st.subheader("📋 Инструкция")
