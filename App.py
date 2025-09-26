@@ -316,6 +316,21 @@ if st.button("🔄 Рассчитать"):
         st.stop()
 
     # -----------------------------
+# Проверка заполненности всех полей
+# -----------------------------
+inputs = [
+    density_st_str, density_row_str,
+    hip_cm_str, chest_cm_str, length_cm_str,
+    armhole_depth_cm_str,
+    neck_width_cm_str, neck_depth_cm_str, neck_depth_back_cm_str,
+    shoulder_len_cm_str, shoulder_slope_cm_str
+]
+
+if not all(inputs):
+    st.error("⚠️ Заполните все поля перед расчётом")
+    st.stop()
+
+    # -----------------------------
     # Пересчёт в петли/ряды
     # -----------------------------
     st_hip     = cm_to_st(hip_cm, density_st)        # низ
