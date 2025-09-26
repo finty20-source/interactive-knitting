@@ -6,6 +6,16 @@ from collections import defaultdict
 st.title("🧶 Интерактивное вязание — полный расчёт модели")
 
 # -----------------------------
+# Сессия для хранения результатов
+# -----------------------------
+if "actions" not in st.session_state:
+    st.session_state.actions = []
+    st.session_state.actions_back = []
+    st.session_state.st_hip = 0
+    st.session_state.rows_total = 0
+    st.session_state.rows_bottom = 0
+
+# -----------------------------
 # Конвертеры
 # -----------------------------
 def cm_to_st(cm, dens_st):
