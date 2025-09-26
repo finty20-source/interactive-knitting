@@ -163,8 +163,6 @@ if prev <= rows_total:
         table_rows.append((str(prev), "Прямо", seg))       # 🔥 одно число
     else:
         table_rows.append((f"{prev}-{rows_total}", "Прямо", seg))
-    else:
-        table_rows.append((f"{prev}-{rows_total}", "Прямо", seg))
 
     df = pd.DataFrame(table_rows, columns=["Ряды", "Действия", "Сегмент"])
     st.dataframe(df, use_container_width=True, hide_index=True)
