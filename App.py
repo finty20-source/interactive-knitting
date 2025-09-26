@@ -128,6 +128,37 @@ def calc_round_neckline(total_stitches, total_rows, start_row, rows_total, strai
     for r, v in zip(chosen, parts):
         actions.append((r, f"-{v} п. горловина (каждое плечо)"))
     return actions
+    
+# -----------------------------
+# Пройма (круглая)
+# -----------------------------
+def calc_round_armhole(st_chest, st_shoulders, start_row, rows_total, rows_armh, depth_percent=0.1, hold_percent=0.1):
+    """Скруглённая пройма: сначала углубление внутрь, потом плавный выход к плечам."""
+    if rows_armh <= 0:
+        return []
+
+    depth_armhole_st = int(round(st_chest * depth_percent))
+    st_mid = st_chest - depth_armhole_st
+
+    rows_smooth = int(rows_armh * 0.4)    # нижняя часть проймы
+    rows_hold   = int(rows_armh * hold_percent)  # прямо
+    rows_rest   = rows_armh - rows_smooth - rows_hold
+
+    actions = []
+
+    # Этап 1: убавки внутрь (грудь -> mid)
+    delta1 = st_mid - st_chest
+    if delta1 < 0:
+        actions += sym_decreases(-delta1, start_row, start_row+rows_smooth, rows_total, "пройма")
+
+    # Этап 2: несколько рядов прямо (st_mid)
+
+    # Этап 3: прибавки наружу (mid -> плечи)
+    delta2 = st_shoulders - st_mid
+    if delta2 > 0:
+        actions += sym_increases(delta2, start_row+rows_smooth+rows_hold, start_row+rows_armh, rows_total, "пройма")
+
+    return actions
 
 # -----------------------------
 # Таблица + сегменты
@@ -256,12 +287,7 @@ if st.button("🔄 Рассчитать"):
     elif delta_bottom < 0:
         actions += sym_decreases(-delta_bottom, 6, rows_to_armhole_end, rows_total, "бок")
 
-    delta_armh = st_shoulders - st_chest
-    if delta_armh > 0:
-        actions += sym_increases(delta_armh, armhole_start_row, armhole_end_row, rows_total, "пройма")
-    elif delta_armh < 0:
-        actions += sym_decreases(-delta_armh, armhole_start_row, armhole_end_row, rows_total, "пройма")
-
+    actions += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, rows_total, rows_armh)
     actions += calc_round_neckline(neck_st, neck_rows_front, neck_start_row_front, rows_total)
     actions += slope_shoulder(st_shldr, shoulder_start_row, rows_total, rows_total)
 
@@ -277,11 +303,7 @@ if st.button("🔄 Рассчитать"):
     elif delta_bottom < 0:
         actions_back += sym_decreases(-delta_bottom, 6, rows_to_armhole_end, rows_total, "бок")
 
-    if delta_armh > 0:
-        actions_back += sym_increases(delta_armh, armhole_start_row, armhole_end_row, rows_total, "пройма")
-    elif delta_armh < 0:
-        actions_back += sym_decreases(-delta_armh, armhole_start_row, armhole_end_row, rows_total, "пройма")
-
+    actions += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, rows_total, rows_armh)
     actions_back += calc_round_neckline(neck_st, neck_rows_back, neck_start_row_back, rows_total)
     actions_back += slope_shoulder(st_shldr, shoulder_start_row, rows_total, rows_total)
 
