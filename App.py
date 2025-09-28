@@ -47,6 +47,21 @@ def split_total_into_steps(total: int, steps: int):
     rem  = total % steps
     return [base + (1 if i < rem else 0) for i in range(steps)]
 
+def allowed_all_rows(start_row: int, end_row: int, rows_total: int):
+    """
+    Разрешённые ряды для частичного вязания горловины:
+    - не раньше 6-го,
+    - не позже rows_total-2 (последние 2 ряда — прямо).
+    - чётные И нечётные допускаются.
+    """
+    if end_row is None:
+        end_row = rows_total
+    high = min(end_row, rows_total - 2)
+    if high < 6:
+        return []
+    start = max(6, start_row)
+    return list(range(start, high + 1)) if start <= high else []
+
 def sym_increases(total_add, start_row, end_row, rows_total, label):
     if total_add <= 0: return []
     if total_add % 2 == 1: total_add += 1
