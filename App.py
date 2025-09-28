@@ -480,42 +480,6 @@ if st.button("🔄 Рассчитать"):
     neck_start_row_front = last_action_row - neck_rows_front + 1
     neck_start_row_back  = last_action_row - neck_rows_back + 1
 
-    # 📊 Сводка
-    st.subheader("📊 Сводка (машинное вязание)")
-    st.write(f"- Набрать петель: **{st_hip}**")
-    st.write(f"- Всего рядов: **{rows_total}**")
-
-    # 📋 Перед
-    st.subheader("📋 Инструкция для переда")
-    actions = []
-    delta_bottom = st_chest - st_hip
-    if delta_bottom > 0:
-        actions += sym_increases(delta_bottom, 6, rows_bottom, rows_total, "бок")
-    elif delta_bottom < 0:
-        actions += sym_decreases(-delta_bottom, 6, rows_bottom, rows_total, "бок")
-
-    actions += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
-    actions += calc_round_neckline(neck_st, neck_rows_front, neck_start_row_front, rows_total, last_action_row, straight_percent=0.15)
-    actions += slope_shoulder(st_shldr, shoulder_start_row, last_action_row, rows_total)
-    actions = merge_actions(actions, rows_total)
-
-    make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, key="table_front")
-
-    # 📋 Спинка
-    st.subheader("📋 Инструкция для спинки")
-    actions_back = []
-    if delta_bottom > 0:
-        actions_back += sym_increases(delta_bottom, 6, rows_bottom, rows_total, "бок")
-    elif delta_bottom < 0:
-        actions_back += sym_decreases(-delta_bottom, 6, rows_bottom, rows_total, "бок")
-
-    actions_back += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
-    actions_back += calc_round_neckline(neck_st, neck_rows_back, neck_start_row_back, rows_total, last_action_row, straight_percent=0.01)
-    actions_back += slope_shoulder(st_shldr, shoulder_start_row, last_action_row, rows_total)
-    actions_back = merge_actions(actions_back, rows_total)
-
-    make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row, key="table_back")
-
     # сохранить для PDF
     st.session_state.actions = actions
     st.session_state.actions_back = actions_back
