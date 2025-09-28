@@ -273,25 +273,19 @@ def section_tags(row, rows_to_armhole_end, neck_start_row, shoulder_start_row):
 
 
 def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, shoulder_start_row, key=None):
-    # сгруппировать действия по рядам; никаких манипуляций в последнем ряду
+    # сгруппировать действия по рядам
     merged = defaultdict(list)
     for row, note in actions:
-        if 1 <= row <= rows_total - 1:
+        if 1 <= row <= rows_total:  
             merged[row].append(note)
 
     rows_sorted = sorted(merged.keys())
     table_rows = []
     prev = 1
-    last_action_row = rows_total - 1  # предпоследний — край для действий
 
     if not rows_sorted:
-        # все прямо до предпоследнего
-        if last_action_row >= 1:
-            seg = section_tags(1, rows_to_armhole_end, neck_start_row, shoulder_start_row)
-            if last_action_row == 1:
-                table_rows.append(("1", "Прямо", seg))
-            else:
-                table_rows.append((f"1-{last_action_row}", "Прямо", seg))
+        seg = section_tags(1, rows_to_armhole_end, neck_start_row, shoulder_start_row)
+        table_rows.append((f"1-{rows_total}", "Прямо", seg))
     else:
         for r in rows_sorted:
             if r > prev:
@@ -304,7 +298,8 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
                                section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
             prev = r + 1
 
-        # добить прямые до предпоследнего
+        # добиваем прямые ряды до последнего действия (если есть пустота)
+        last_action_row = max(rows_sorted)
         if prev <= last_action_row:
             seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
             if prev == last_action_row:
@@ -312,13 +307,10 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
             else:
                 table_rows.append((f"{prev}-{last_action_row}", "Прямо", seg))
 
-    # финальная строка всегда — закрытие петель
-    seg_last = section_tags(rows_total, rows_to_armhole_end, neck_start_row, shoulder_start_row)
-    table_rows.append((str(rows_total), "Закрытие петель", seg_last))
-
-    # показать и сохранить для PDF
+    # 👉 финальный ряд = последняя убавка (никакого "закрытия")
     df = pd.DataFrame(table_rows, columns=["Ряды", "Действия", "Сегмент"])
     st.dataframe(df, use_container_width=True, hide_index=True)
+
     if key:
         st.session_state[key] = table_rows
 
