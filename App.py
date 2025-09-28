@@ -130,7 +130,7 @@ def calc_round_neckline(total_stitches, total_rows, start_row, rows_total, last_
 
     actions = []
     actions.append((r, f"-{v} п. горловина (справа)"))
-actions.append((r, f"-{v} п. горловина (слева)"))
+    actions.append((r, f"-{v} п. горловина (слева)"))
 
     if rest <= 0 or len(rows) == 1:
         return actions
