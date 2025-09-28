@@ -78,8 +78,9 @@ def sym_decreases(total_sub, start_row, end_row, rows_total, label):
 def slope_shoulder(total_stitches, start_row, end_row, rows_total):
     if total_stitches <= 0:
         return []
-    # последний ряд оставляем под закрытие
-    rows = allowed_even_rows(start_row, end_row, rows_total - 1, force_last=True)
+    # ⚡️ убавки делаем только до предпоследнего ряда
+    limit = rows_total - 1
+    rows = allowed_even_rows(start_row, end_row, limit, force_last=True)
     if not rows:
         return []
     steps = len(rows)
@@ -282,17 +283,18 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
                                section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
             prev = r + 1
 
-    # 👉 последний ряд = ряд закрытия
+    # 👉 последний ряд = закрытие петель
     last_row = rows_total
-    if prev <= last_row:
+    if prev < last_row:
         seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
-        if prev == last_row:
-            table_rows.append((str(prev), "Прямо (закрытие)", seg))
+        if prev == last_row - 1:
+            table_rows.append((str(prev), "Прямо", seg))
         else:
-            table_rows.append((f"{prev}-{last_row}", "Прямо (закрытие)", seg))
+            table_rows.append((f"{prev}-{last_row-1}", "Прямо", seg))
 
-    df = pd.DataFrame(table_rows, columns=["Ряды", "Действия", "Сегмент"])
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    # финальный ряд всегда отдельной строкой
+    seg = section_tags(last_row, rows_to_armhole_end, neck_start_row, shoulder_start_row)
+    table_rows.append((str(last_row), "Закрытие петель", seg))
 
     # ⚡️ сохраняем таблицу для PDF
     if key:
