@@ -310,16 +310,6 @@ def make_table_full(actions, rows_count, rows_to_armhole_end, neck_start_row, sh
     if key:
         st.session_state[key] = table_rows
 
-
-# -----------------------------
-# 👉 Применяем сторону каретки уже после расчётов
-# -----------------------------
-actions = fix_carriage_side(actions, method)
-actions_back = fix_carriage_side(actions_back, method)
-
-make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, key="table_front")
-make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row, key="table_back")
-
 def parse_inputs():
     return (
         float(density_st_str.replace(",", ".")),
