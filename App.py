@@ -239,21 +239,29 @@ def merge_actions(actions, rows_total):
 # -----------------------------
 # Учёт стороны каретки
 # -----------------------------
-def fix_carriage_side(actions):
-    """Убавки выполняются только со стороны каретки:
-       - нечётные ряды: каретка справа → убавки справа
-       - чётные ряды: каретка слева  → убавки слева
-       Если убавка не совпадает со стороной каретки → переносим на ряд выше.
+def fix_carriage_side(actions, method="Стандартные"):
+    """Учет стороны каретки:
+       - Нечётные ряды → каретка справа
+       - Чётные ряды  → каретка слева
+       В зависимости от метода убавки делаем со стороны нити или с противоположной.
     """
     fixed = []
     for r, note in actions:
         note_lower = note.lower()
-        if ("справа" in note_lower and r % 2 == 0) or ("слева" in note_lower and r % 2 == 1):
-            # переносим на ряд выше (если возможно)
+
+        # Определяем где должна быть убавка
+        if r % 2 == 1:  # нечётный ряд → каретка справа
+            correct_side = "справа" if method == "Стандартные (со стороны каретки)" else "слева"
+        else:           # чётный ряд → каретка слева
+            correct_side = "слева" if method == "Стандартные (со стороны каретки)" else "справа"
+
+        # Если убавка не совпадает → переносим на ряд выше
+        if correct_side not in note_lower:
             new_r = r-1 if r > 1 else r+1
-            fixed.append((new_r, note))
+            fixed.append((new_r, note + f" (перенос для {method})"))
         else:
             fixed.append((r, note))
+
     return fixed
 
 # -----------------------------
@@ -270,6 +278,10 @@ def section_tags(row, rows_to_armhole_end, neck_start_row, shoulder_start_row):
     if shoulder_start_row and row >= shoulder_start_row:
         tags.append("Скос плеча")
     return " + ".join(tags) if tags else "—"
+
+# применяем корректировку по методу убавок
+actions = fix_carriage_side(actions, method)
+actions_back = fix_carriage_side(actions_back, method)
 
 
 def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, shoulder_start_row, key=None):
@@ -349,6 +361,14 @@ neck_depth_back_cm_str = st.text_input("Глубина горловины спи
 
 shoulder_len_cm_str    = st.text_input("Длина плеча (см)", placeholder="введите длину")
 shoulder_slope_cm_str  = st.text_input("Скос плеча (см)", placeholder="введите высоту")
+
+# -----------------------------
+# Метод убавок
+# -----------------------------
+method = st.radio(
+    "Метод убавок",
+    ["Стандартные (со стороны каретки)", "Частичное вязание (с противоположной стороны)"]
+)
 
 # -----------------------------
 # Кнопка расчёта
