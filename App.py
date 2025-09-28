@@ -58,7 +58,7 @@ def sym_increases(total_add, start_row, end_row, rows_total, label):
     idxs  = np.linspace(0, len(rows)-1, num=steps, dtype=int)
     chosen= [rows[i] for i in idxs]
     out = []
-for r, v in zip(chosen, parts):
+    for r, v in zip(chosen, parts):
     out.append((r, f"+{v} п. {label} (справа)"))
     out.append((r, f"+{v} п. {label} (слева)"))
     return out
@@ -74,7 +74,7 @@ def sym_decreases(total_sub, start_row, end_row, rows_total, label):
     idxs  = np.linspace(0, len(rows)-1, num=steps, dtype=int)
     chosen= [rows[i] for i in idxs]
     out = []
-for r, v in zip(chosen, parts):
+    for r, v in zip(chosen, parts):
     out.append((r, f"-{v} п. {label} (справа)"))
     out.append((r, f"-{v} п. {label} (слева)"))
     return out
