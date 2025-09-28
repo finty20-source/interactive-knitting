@@ -426,7 +426,7 @@ if st.button("🔄 Рассчитать"):
     # ⚡️ учёт каретки
     actions = fix_carriage_side(actions)
 
-    make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, last_row)
+    make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row)
 
 
     # -----------------------------
@@ -458,7 +458,7 @@ if st.button("🔄 Рассчитать"):
     # ⚡️ учёт каретки
     actions_back = fix_carriage_side(actions_back)
 
-    make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row, last_row)
+    make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row)
    
     # -----------------------------
     # сохраняем результаты для PDF
