@@ -82,26 +82,31 @@ def sym_decreases(total_sub, start_row, end_row, rows_total, label):
 # -----------------------------
 # Скос плеча (заканчивается до последнего ряда)
 # -----------------------------
-def make_table_with_shoulders(actions, rows_total, rows_to_armhole_end, neck_start_row, shoulder_start_row):
-    merged = defaultdict(list)
-    for row, note in actions:
-        merged[row].append(note)
+def slope_shoulders(total_stitches, start_row, end_row, rows_total):
+    """
+    Левое плечо — чётные ряды.
+    Правое плечо — со смещением на +1.
+    """
+    if total_stitches <= 0:
+        return [], []
 
-    rows_sorted = sorted(merged.keys())
-    table_rows = []
-    prev = 1
+    rows = allowed_even_rows(start_row, end_row, rows_total)
+    if not rows:
+        return [], []
 
-    for r in rows_sorted:
-        if r > prev:
-            table_rows.append((f"{prev}-{r-1}", "Прямо"))
-        table_rows.append((str(r), "; ".join(merged[r])))
-        prev = r + 1
+    steps = len(rows)
+    base = total_stitches // steps
+    rem  = total_stitches % steps
 
-    if prev <= rows_total:
-        table_rows.append((f"{prev}-{rows_total}", "Прямо"))
+    left_actions, right_actions = [], []
 
-    df = pd.DataFrame(table_rows, columns=["Ряды", "Действия"])
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    for i, r in enumerate(rows):
+        dec = base + (1 if i < rem else 0)
+        left_actions.append((r, f"-{dec} п. скос плеча (левое плечо)"))
+        if r+1 <= rows_total:
+            right_actions.append((r+1, f"-{dec} п. скос плеча (правое плечо)"))
+
+    return left_actions, right_actions
 
 # -----------------------------
 # Горловина (круглая)
