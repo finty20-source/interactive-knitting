@@ -270,7 +270,12 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
 
     if not rows_sorted:
         seg = section_tags(1, rows_to_armhole_end, neck_start_row, shoulder_start_row)
-        table_rows.append((f"1-{rows_total}", "Прямо", seg))
+        # всё изделие до предпоследнего ряда
+        if rows_total > 1:
+            table_rows.append((f"1-{rows_total-1}", "Прямо", seg))
+        # финальный ряд = закрытие
+        seg_last = section_tags(rows_total, rows_to_armhole_end, neck_start_row, shoulder_start_row)
+        table_rows.append((str(rows_total), "Закрытие петель", seg_last))
     else:
         for r in rows_sorted:
             if r > prev:
@@ -283,20 +288,22 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
                                section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
             prev = r + 1
 
-    # 👉 последний ряд = закрытие петель
-    last_row = rows_total
-    if prev < last_row:
-        seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
-        if prev == last_row - 1:
-            table_rows.append((str(prev), "Прямо", seg))
-        else:
-            table_rows.append((f"{prev}-{last_row-1}", "Прямо", seg))
+        # 👉 доводим до предпоследнего ряда
+        if prev <= rows_total - 1:
+            seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
+            if prev == rows_total - 1:
+                table_rows.append((str(prev), "Прямо", seg))
+            else:
+                table_rows.append((f"{prev}-{rows_total-1}", "Прямо", seg))
 
-    # финальный ряд всегда отдельной строкой
-    seg = section_tags(last_row, rows_to_armhole_end, neck_start_row, shoulder_start_row)
-    table_rows.append((str(last_row), "Закрытие петель", seg))
+        # 👉 последний ряд = всегда закрытие петель
+        seg_last = section_tags(rows_total, rows_to_armhole_end, neck_start_row, shoulder_start_row)
+        table_rows.append((str(rows_total), "Закрытие петель", seg_last))
 
-    # ⚡️ сохраняем таблицу для PDF
+    df = pd.DataFrame(table_rows, columns=["Ряды", "Действия", "Сегмент"])
+    st.dataframe(df, use_container_width=True, hide_index=True)
+
+    # ⚡️ сохраняем таблицу в session_state (для PDF)
     if key:
         st.session_state[key] = table_rows
 
