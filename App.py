@@ -814,11 +814,11 @@ make_table_full(actions_back, rows_total, rows_to_armhole_end, neck_start_row_ba
     # -----------------------------
     # сохраняем для PDF
     # -----------------------------
-    st.session_state.actions = actions
-    st.session_state.actions_back = actions_back
-    st.session_state.st_hip = st_hip
-    st.session_state.rows_total = rows_total
-    st.session_state.rows_bottom = rows_bottom
+st.session_state.actions = actions
+st.session_state.actions_back = actions_back
+st.session_state.st_hip = st_hip
+st.session_state.rows_total = rows_total
+st.session_state.rows_bottom = rows_bottom
 
     # пересчёт в петли/ряды
     st_hip     = cm_to_st(hip_cm, density_st)
@@ -847,12 +847,12 @@ make_table_full(actions_back, rows_total, rows_to_armhole_end, neck_start_row_ba
     neck_start_row_front = last_action_row - neck_rows_front + 1
     neck_start_row_back  = last_action_row - neck_rows_back + 1
 
-    # сохранить для PDF
-    st.session_state.actions = actions
-    st.session_state.actions_back = actions_back
-    st.session_state.st_hip = st_hip
-    st.session_state.rows_total = rows_total
-    st.session_state.rows_bottom = rows_bottom
+# сохранить для PDF
+st.session_state.actions = actions
+st.session_state.actions_back = actions_back
+st.session_state.st_hip = st_hip
+st.session_state.rows_total = rows_total
+st.session_state.rows_bottom = rows_bottom
 
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
