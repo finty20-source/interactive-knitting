@@ -450,7 +450,13 @@ if st.button("🔄 Рассчитать"):
         actions += sym_decreases(-delta_bottom, 6, rows_bottom, rows_total, "бок")
 
     actions += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
-    actions += calc_round_neckline(neck_st, neck_rows_front, neck_start_row_front, rows_total, last_action_row)
+    actions += calc_round_neckline(
+    neck_st, 
+    neck_rows_front, 
+    neck_start_row_front, 
+    rows_total, 
+    last_action_row
+)
     actions_left, actions_right = slope_shoulders(st_shldr, shoulder_start_row, rows_total, rows_total)
     actions += actions_left + actions_right
     actions = merge_actions(actions, rows_total)
@@ -488,7 +494,13 @@ if st.button("🔄 Рассчитать"):
     actions_back = merge_actions(actions_back, rows_total)
     actions_back = fix_carriage_side(actions_back, method)  # ⚡️ если используешь сторону каретки
     make_table_full(actions_back, rows_total, rows_to_armhole_end, neck_start_row_back, shoulder_start_row, key="table_back")
-
+    actions_back += calc_round_neckline(
+        neck_st, 
+        neck_rows_back, 
+        neck_start_row_back, 
+        rows_total, 
+        last_action_row
+    )
     # -----------------------------
     # сохраняем для PDF
     # -----------------------------
