@@ -453,7 +453,7 @@ if st.button("🔄 Рассчитать"):
     actions += calc_round_neckline(neck_st, neck_rows_front, neck_start_row_front, rows_total, last_action_row)
     actions += slope_shoulder(st_shldr, shoulder_start_row, last_action_row, rows_total)
     actions = merge_actions(actions, rows_total)
-    actions = fix_carriage_side(actions, method)   # ⚡️ вот тут учитываем сторону каретки
+    actions = fix_carriage_side(actions, method)  # ⚡️ вот тут учитываем сторону каретки
     make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, last_action_row, key="table_front")
 
     # -----------------------------
