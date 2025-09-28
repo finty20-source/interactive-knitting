@@ -446,22 +446,6 @@ if st.button("🔄 Рассчитать"):
     st.session_state.rows_total = rows_total
     st.session_state.rows_bottom = rows_bottom
 
-# -----------------------------
-# Ветка: машинное вязание
-# -----------------------------
-if machine_btn:
-    if not all(inputs):
-        st.error("⚠️ Заполните все поля перед расчётом")
-        st.stop()
-
-    try:
-        (density_st, density_row, hip_cm, chest_cm, length_cm,
-         armhole_depth_cm, neck_width_cm, neck_depth_cm, neck_depth_back_cm,
-         shoulder_len_cm, shoulder_slope_cm) = parse_inputs()
-    except:
-        st.error("⚠️ Введите только числа (можно с точкой или запятой)")
-        st.stop()
-
     # пересчёт в петли/ряды
     st_hip     = cm_to_st(hip_cm, density_st)
     st_chest   = cm_to_st(chest_cm, density_st)
