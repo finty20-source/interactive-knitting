@@ -740,85 +740,85 @@ if st.button("🔄 Рассчитать"):
 # -----------------------------
 # 📋 Перед
 # -----------------------------
-st.subheader("📋 Инструкция для переда")
-actions = []
+    st.subheader("📋 Инструкция для переда")
+    actions = []
 
-# 1) Низ: разница между низом и «грудью» (техн. ширина = st_shoulders)
-delta_bottom = (2*st_shldr + neck_st) - st_hip
-if delta_bottom > 0:
-    actions += sym_increases(delta_bottom, 6, rows_bottom, rows_total, "бок")
-elif delta_bottom < 0:
-    actions += sym_decreases(-delta_bottom, 6, rows_bottom, rows_total, "бок")
+    # 1) Низ: разница между низом и «грудью» (техн. ширина = st_shoulders)
+    delta_bottom = (2*st_shldr + neck_st) - st_hip
+    if delta_bottom > 0:
+        actions += sym_increases(delta_bottom, 6, rows_bottom, rows_total, "бок")
+    elif delta_bottom < 0:
+        actions += sym_decreases(-delta_bottom, 6, rows_bottom, rows_total, "бок")
 
-# 2) Пройма (как у тебя было)
-actions += calc_round_armhole(
-    st_chest,            # если используешь «скрытую грудь», можно подставить 2*st_shldr+neck_st
-    2*st_shldr + neck_st,
-    armhole_start_row,
-    shoulder_start_row,
-    rows_total
-)
+    # 2) Пройма (как у тебя было)
+    actions += calc_round_armhole(
+        st_chest,            # если используешь «скрытую грудь», можно подставить 2*st_shldr+neck_st
+        2*st_shldr + neck_st,
+        armhole_start_row,
+        shoulder_start_row,
+        rows_total
+    )
 
-# 3) Горловина + скос плеча (единая логика)
-actions += plan_neck_and_shoulder(
-    neck_st=neck_st,
-    neck_rows=neck_rows_front,
-    neck_start_row=neck_start_row_front,
-    st_shldr=st_shldr,
-    rows_slope=rows_slope,
-    rows_total=rows_total,
-    straight_percent=0.10
-)
+    # 3) Горловина + скос плеча (единая логика)
+    actions += plan_neck_and_shoulder(
+        neck_st=neck_st,
+        neck_rows=neck_rows_front,
+        neck_start_row=neck_start_row_front,
+        st_shldr=st_shldr,
+        rows_slope=rows_slope,
+        rows_total=rows_total,
+        straight_percent=0.10
+    )
 
 # 4) Слияние, сторона каретки, вывод
-actions = merge_actions(actions, rows_total)
-actions = fix_carriage_side(actions, method)
-make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, key="table_front")
+    actions = merge_actions(actions, rows_total)
+    actions = fix_carriage_side(actions, method)
+    make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, key="table_front")
     # -----------------------------
 # 📋 Спинка
 # -----------------------------
-st.subheader("📋 Инструкция для спинки")
-actions_back = []
+    st.subheader("📋 Инструкция для спинки")
+    actions_back = []
 
-# 1) Низ
-delta_bottom = (2*st_shldr + neck_st) - st_hip
-if delta_bottom > 0:
-    actions_back += sym_increases(delta_bottom, 6, rows_to_armhole_end, rows_total, "бок")
-elif delta_bottom < 0:
-    actions_back += sym_decreases(-delta_bottom, 6, rows_to_armhole_end, rows_total, "бок")
+    # 1) Низ
+    delta_bottom = (2*st_shldr + neck_st) - st_hip
+    if delta_bottom > 0:
+        actions_back += sym_increases(delta_bottom, 6, rows_to_armhole_end, rows_total, "бок")
+    elif delta_bottom < 0:
+        actions_back += sym_decreases(-delta_bottom, 6, rows_to_armhole_end, rows_total, "бок")
 
 # 2) Пройма
-delta_armh = (2*st_shldr + neck_st) - st_chest
-armhole_start_row = rows_to_armhole_end + 1
-armhole_end_row   = shoulder_start_row - 1
-if delta_armh > 0:
-    actions_back += sym_increases(delta_armh, armhole_start_row, armhole_end_row, rows_total, "пройма")
-elif delta_armh < 0:
-    actions_back += sym_decreases(-delta_armh, armhole_start_row, armhole_end_row, rows_total, "пройма")
+    delta_armh = (2*st_shldr + neck_st) - st_chest
+    armhole_start_row = rows_to_armhole_end + 1
+    armhole_end_row   = shoulder_start_row - 1
+    if delta_armh > 0:
+        actions_back += sym_increases(delta_armh, armhole_start_row, armhole_end_row, rows_total, "пройма")
+    elif delta_armh < 0:
+        actions_back += sym_decreases(-delta_armh, armhole_start_row, armhole_end_row, rows_total, "пройма")
 
-# 3) Горловина + скос плеча (единая логика)
-actions_back += plan_neck_and_shoulder(
-    neck_st=neck_st,
-    neck_rows=neck_rows_back,
-    neck_start_row=neck_start_row_back,
-    st_shldr=st_shldr,
-    rows_slope=rows_slope,
-    rows_total=rows_total,
-    straight_percent=0.10
-)
+    # 3) Горловина + скос плеча (единая логика)
+    actions_back += plan_neck_and_shoulder(
+        neck_st=neck_st,
+        neck_rows=neck_rows_back,
+        neck_start_row=neck_start_row_back,
+        st_shldr=st_shldr,
+        rows_slope=rows_slope,
+        rows_total=rows_total,
+        straight_percent=0.10
+    )
 
-# 4) Слияние и вывод
-actions_back = merge_actions(actions_back, rows_total)
-actions_back = fix_carriage_side(actions_back, method)
-make_table_full(actions_back, rows_total, rows_to_armhole_end, neck_start_row_back, shoulder_start_row, key="table_back")
+    # 4) Слияние и вывод
+    actions_back = merge_actions(actions_back, rows_total)
+    actions_back = fix_carriage_side(actions_back, method)
+    make_table_full(actions_back, rows_total, rows_to_armhole_end, neck_start_row_back, shoulder_start_row, key="table_back")
     # -----------------------------
     # сохраняем для PDF
     # -----------------------------
-st.session_state.actions = actions
-st.session_state.actions_back = actions_back
-st.session_state.st_hip = st_hip
-st.session_state.rows_total = rows_total
-st.session_state.rows_bottom = rows_bottom
+    st.session_state.actions = actions
+    st.session_state.actions_back = actions_back
+    st.session_state.st_hip = st_hip
+    st.session_state.rows_total = rows_total
+    st.session_state.rows_bottom = rows_bottom
 
     # пересчёт в петли/ряды
     st_hip     = cm_to_st(hip_cm, density_st)
@@ -847,12 +847,12 @@ st.session_state.rows_bottom = rows_bottom
     neck_start_row_front = last_action_row - neck_rows_front + 1
     neck_start_row_back  = last_action_row - neck_rows_back + 1
 
-# сохранить для PDF
-st.session_state.actions = actions
-st.session_state.actions_back = actions_back
-st.session_state.st_hip = st_hip
-st.session_state.rows_total = rows_total
-st.session_state.rows_bottom = rows_bottom
+    # сохранить для PDF
+    st.session_state.actions = actions
+    st.session_state.actions_back = actions_back
+    st.session_state.st_hip = st_hip
+    st.session_state.rows_total = rows_total
+    st.session_state.rows_bottom = rows_bottom
 
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
