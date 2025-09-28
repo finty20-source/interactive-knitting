@@ -61,7 +61,7 @@ def sym_increases(total_add, start_row, end_row, rows_total, label):
 for r, v in zip(chosen, parts):
     out.append((r, f"+{v} п. {label} (справа)"))
     out.append((r, f"+{v} п. {label} (слева)"))
-return out
+    return out
 
 def sym_decreases(total_sub, start_row, end_row, rows_total, label):
     if total_sub <= 0: return []
@@ -77,7 +77,7 @@ def sym_decreases(total_sub, start_row, end_row, rows_total, label):
 for r, v in zip(chosen, parts):
     out.append((r, f"-{v} п. {label} (справа)"))
     out.append((r, f"-{v} п. {label} (слева)"))
-return out
+    return out
 
 # -----------------------------
 # Скос плеча (заканчивается до последнего ряда)
