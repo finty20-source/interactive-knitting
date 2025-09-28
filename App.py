@@ -343,15 +343,24 @@ shoulder_slope_cm_str  = st.text_input("Скос плеча (см)", placeholder
 # Кнопка расчёта
 # -----------------------------
 if st.button("🔄 Рассчитать"):
+    # Проверка: все поля должны быть заполнены
+    inputs = [
+        density_st_str, density_row_str,
+        hip_cm_str, chest_cm_str, length_cm_str,
+        armhole_depth_cm_str,
+        neck_width_cm_str, neck_depth_cm_str, neck_depth_back_cm_str,
+        shoulder_len_cm_str, shoulder_slope_cm_str
+    ]
     if not all(inputs):
         st.error("⚠️ Заполните все поля перед расчётом")
         st.stop()
 
+    # Парсим данные
     try:
         (density_st, density_row, hip_cm, chest_cm, length_cm,
          armhole_depth_cm, neck_width_cm, neck_depth_cm, neck_depth_back_cm,
          shoulder_len_cm, shoulder_slope_cm) = parse_inputs()
-    except:
+    except ValueError:
         st.error("⚠️ Введите только числа (можно с точкой или запятой)")
         st.stop()
 
