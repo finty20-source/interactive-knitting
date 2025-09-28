@@ -80,24 +80,28 @@ for r, v in zip(chosen, parts):
 return out
 
 # -----------------------------
-# Скос плеча (заканчивается до ряда закрытия)
+# Скос плеча (заканчивается до последнего ряда)
 # -----------------------------
 def slope_shoulder(total_stitches, start_row, end_row, rows_total):
-    """Скос плеча: распределяем до предпоследнего ряда (последний = закрытие)."""
+    """Скос плеча: распределяем убавки до предпоследнего ряда (последний = не трогаем)."""
     if total_stitches <= 0:
         return []
-    limit = rows_total - 1  # манипуляции только до предпоследнего ряда
+
+    # манипуляции только до rows_total-1
+    limit = rows_total - 1
     rows = allowed_even_rows(start_row, min(end_row, limit), limit, force_last=True)
     if not rows:
         return []
+
     steps = len(rows)
     base = total_stitches // steps
     rem  = total_stitches % steps
     actions = []
+
     for i, r in enumerate(rows):
         dec = base + (1 if i < rem else 0)
-        actions.append((r, f"-{dec} п. скос плеча (справа)"))
-actions.append((r, f"-{dec} п. скос плеча (слева)"))
+        actions.append((r, f"-{dec} п. скос плеча (одно плечо)"))
+
     return actions
 
 # -----------------------------
