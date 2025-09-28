@@ -266,7 +266,7 @@ def section_tags(row, rows_to_armhole_end, neck_start_row, shoulder_start_row):
     return " + ".join(tags) if tags else "—"
 
 
-def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, shoulder_start_row, last_row):
+def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, shoulder_start_row, last_row, key=None):
     merged = defaultdict(list)
     for row, note in actions:
         merged[row].append(note)
@@ -290,7 +290,6 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
                                section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
             prev = r + 1
 
-    # конец = именно last_row (а не rows_total)
     if prev <= last_row:
         seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
         if prev == last_row:
@@ -300,6 +299,10 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
 
     df = pd.DataFrame(table_rows, columns=["Ряды", "Действия", "Сегмент"])
     st.dataframe(df, use_container_width=True, hide_index=True)
+
+    # ⚡️ сохраняем таблицу в session_state, чтобы PDF мог её достать
+    if key:
+        st.session_state[key] = table_rows
 
 # -----------------------------
 # Ввод параметров
@@ -423,7 +426,7 @@ if st.button("🔄 Рассчитать"):
     # ⚡️ учёт каретки
     actions = fix_carriage_side(actions)
 
-    make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, last_row)
+    make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, last_row, key="table_front")
 
 
     # -----------------------------
@@ -455,7 +458,7 @@ if st.button("🔄 Рассчитать"):
     # ⚡️ учёт каретки
     actions_back = fix_carriage_side(actions_back)
 
-    make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row, last_row)
+    make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row, last_row, key="table_back")
    
     # -----------------------------
     # сохраняем результаты для PDF
