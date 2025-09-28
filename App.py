@@ -108,20 +108,26 @@ def slope_shoulder(total_stitches, start_row, end_row, rows_total):
 # Горловина (круглая)
 # -----------------------------
 def calc_round_neckline(total_stitches, total_rows, start_row, rows_total, last_row, straight_percent=0.20):
+    """Рассчёт убавок для круглой горловины.
+       total_stitches – ширина горловины в петлях,
+       total_rows     – глубина горловины в рядах,
+       start_row      – ряд начала горловины,
+       rows_total     – всего рядов в изделии,
+       last_row       – последний ряд для манипуляций,
+       straight_percent – % прямых рядов в конце (без убавок).
+    """
     if total_stitches <= 0 or total_rows <= 0:
         return []
 
-    # первый шаг = 60% и доводим до чётного
+    # Первый шаг — крупное убавление (≈60%)
     first_dec = int(round(total_stitches * 0.60))
     if first_dec % 2 == 1:
         first_dec += 1
     rest = total_stitches - first_dec
 
-    # прямые ряды перед концом = % от всей глубины
+    # Прямые ряды в конце
     straight_rows = max(2, int(round(total_rows * straight_percent)))
     neck_end_by_depth = start_row + total_rows - 1 - straight_rows
-
-    # ⚡️ ограничиваем по last_row
     effective_end = min(neck_end_by_depth, last_row)
 
     rows = allowed_even_rows(start_row, effective_end, rows_total, force_last=True)
@@ -129,34 +135,28 @@ def calc_round_neckline(total_stitches, total_rows, start_row, rows_total, last_
         return []
 
     actions = []
-    actions.append((r, f"-{v} п. горловина (справа)"))
-    actions.append((r, f"-{v} п. горловина (слева)"))
+    # Центральное закрытие
+    actions.append((rows[0], f"-{first_dec} п. горловина (середина, разделение на плечи)"))
 
+    # Если остатка нет — всё готово
     if rest <= 0 or len(rows) == 1:
         return actions
 
+    # Остаточные убавки
     rest_rows = rows[1:]
-    steps = min(len(rest_rows), rest)
+    steps = min(len(rest_rows), rest)  # шагов не больше остатка
+    if steps <= 0:
+        return actions
+
     idxs   = np.linspace(0, len(rest_rows)-1, num=steps, dtype=int)
     chosen = [rest_rows[i] for i in idxs]
     parts  = split_total_into_steps(rest, steps)
 
-    # последние шаги делаем по 1 петле (если надо)
-    if steps >= 2:
-        over = 0
-        for i in [steps-2, steps-1]:
-            if parts[i] > 1:
-                over += parts[i] - 1
-                parts[i] = 1
-        jmax = max(1, steps-2)
-        j = 0
-        while over > 0 and jmax > 0:
-            parts[j % jmax] += 1
-            over -= 1
-            j += 1
-
+    # Добавляем симметричные убавки по сторонам
     for r, v in zip(chosen, parts):
-        actions.append((r, f"-{v} п. горловина (каждое плечо)"))
+        if v > 0:
+            actions.append((r, f"-{v} п. горловина (справа)"))
+            actions.append((r, f"-{v} п. горловина (слева)"))
 
     return actions
 
