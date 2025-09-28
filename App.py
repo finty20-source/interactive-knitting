@@ -239,36 +239,32 @@ def merge_actions(actions, rows_total):
 # -----------------------------
 # Учёт стороны каретки
 # -----------------------------
-def fix_carriage_side(actions, method="Стандартные (со стороны каретки)"):
+def fix_carriage_side(actions, method=None):
     """
-    Учитывает метод убавок:
-    - Стандартные: убавки выполняются со стороны каретки
-    - Частичное вязание: убавки выполняются с противоположной стороны от каретки
+    Стандартные: убавки со стороны каретки.
+    Частичное:   убавки с противоположной стороны.
+    Нечётные ряды → каретка справа; чётные → каретка слева.
     """
+    if method is None:
+        method = st.session_state.get("method", "Стандартные (со стороны каретки)")
+
+    use_std = method.startswith("Стандартные")
     fixed = []
+
     for r, note in actions:
         note_lower = note.lower()
 
-        if method.startswith("Стандартные"):
-            # нечётные ряды → каретка справа → убавки справа
-            # чётные ряды → каретка слева  → убавки слева
-            if ("справа" in note_lower and r % 2 == 0) or ("слева" in note_lower and r % 2 == 1):
-                new_r = r-1 if r > 1 else r+1
-                fixed.append((new_r, note))
-            else:
-                fixed.append((r, note))
+        # где "правильно" делать убавку в этом ряду
+        if r % 2 == 1:  # нечётный: каретка справа
+            correct_side = "справа" if use_std else "слева"
+        else:           # чётный: каретка слева
+            correct_side = "слева" if use_std else "справа"
 
-        elif method.startswith("Частичное"):
-            # нечётные ряды → каретка справа → убавки слева
-            # чётные ряды → каретка слева  → убавки справа
-            if ("слева" in note_lower and r % 2 == 0) or ("справа" in note_lower and r % 2 == 1):
-                new_r = r-1 if r > 1 else r+1
-                fixed.append((new_r, note))
-            else:
-                fixed.append((r, note))
-
+        # переносим только те действия, где сторона указана явным словом
+        if (("справа" in note_lower) or ("слева" in note_lower)) and (correct_side not in note_lower):
+            new_r = r - 1 if r > 1 else r + 1
+            fixed.append((new_r, note))
         else:
-            # если метод неизвестен — оставляем как есть
             fixed.append((r, note))
 
     return fixed
@@ -372,12 +368,16 @@ shoulder_len_cm_str    = st.text_input("Длина плеча (см)", placehold
 shoulder_slope_cm_str  = st.text_input("Скос плеча (см)", placeholder="введите высоту")
 
 # -----------------------------
-# Выбор метода убавок
+# Выбор метода убавок (сохранение в session_state)
 # -----------------------------
+if "method" not in st.session_state:
+    st.session_state.method = "Стандартные (со стороны каретки)"
+
 method = st.radio(
     "Метод убавок:",
     ["Стандартные (со стороны каретки)", "Частичное вязание (противоположная сторона)"],
-    index=0
+    index=0,
+    key="method"
 )
 
 # -----------------------------
@@ -453,7 +453,7 @@ if st.button("🔄 Рассчитать"):
     actions += calc_round_neckline(neck_st, neck_rows_front, neck_start_row_front, rows_total, last_action_row)
     actions += slope_shoulder(st_shldr, shoulder_start_row, last_action_row, rows_total)
     actions = merge_actions(actions, rows_total)
-    actions = fix_carriage_side(actions, method)   # ⚡️ применяем выбранный метод
+    actions = fix_carriage_side(actions, method)   # ⚡️ вот тут учитываем сторону каретки
     make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, last_action_row, key="table_front")
 
     # -----------------------------
@@ -470,7 +470,7 @@ if st.button("🔄 Рассчитать"):
     actions_back += calc_round_neckline(neck_st, neck_rows_back, neck_start_row_back, rows_total, last_action_row, straight_percent=0.02)
     actions_back += slope_shoulder(st_shldr, shoulder_start_row, last_action_row, rows_total)
     actions_back = merge_actions(actions_back, rows_total)
-    actions_back = fix_carriage_side(actions_back, method)   # ⚡️ применяем выбранный метод
+    actions_back = fix_carriage_side(actions_back, method)  # ⚡️ вот тут учитываем сторону каретки
     make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row, last_action_row, key="table_back")
 
     # -----------------------------
