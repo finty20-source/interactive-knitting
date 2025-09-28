@@ -239,38 +239,50 @@ def calc_round_armhole(st_chest, st_shoulders, start_row, shoulder_start_row, ro
 # Слияние действий (горловина + плечо)
 # -----------------------------
 def merge_actions(actions, rows_total):
-    """Правило:
-       - убавки горловины и скоса плеча не могут быть в одном ряду.
-       - горловина остаётся в своём ряду.
-       - скос плеча переносим на +1 ряд (если занято — ищем дальше)."""
+    """
+    Правила:
+    - горловина и скос плеча могут совпасть только в САМОМ ПЕРВОМ ряду горловины,
+      в остальных случаях мы их разносим.
+    - горловина остаётся в своём ряду.
+    - скос переносим на +1 ряд (если занят — ищем дальше).
+    """
     merged = defaultdict(list)
     for row, note in actions:
         merged[row].append(note)
 
     fixed = []
     used_rows = set()
+    first_neck_row = None  # запомним первый ряд горловины
+
+    # сначала найдём первый ряд горловины
+    for row in sorted(merged.keys()):
+        if any("горловина" in n for n in merged[row]):
+            first_neck_row = row
+            break
 
     for row in sorted(merged.keys()):
         notes = merged[row]
 
         if ("горловина" in " ".join(notes)) and ("скос плеча" in " ".join(notes)):
-            # разделяем
-            shoulder_notes = [n for n in notes if "скос плеча" in n]
-            neck_notes     = [n for n in notes if "горловина" in n]
+            # если это первый ряд горловины → оставляем вместе
+            if row == first_neck_row:
+                fixed.append((row, "; ".join(notes)))
+                used_rows.add(row)
+            else:
+                # разделяем: горловина в своём ряду, скос переносим выше
+                shoulder_notes = [n for n in notes if "скос плеча" in n]
+                neck_notes     = [n for n in notes if "горловина" in n]
 
-            # горловина остаётся в своём ряду
-            fixed.append((row, "; ".join(neck_notes)))
-            used_rows.add(row)
+                fixed.append((row, "; ".join(neck_notes)))
+                used_rows.add(row)
 
-            # плечо переносим на следующий свободный ряд
-            new_row = row + 1
-            while new_row in used_rows and new_row < rows_total:
-                new_row += 1
+                new_row = row + 1
+                while new_row in used_rows and new_row < rows_total:
+                    new_row += 1
 
-            for n in shoulder_notes:
-                fixed.append((new_row, n))
-                used_rows.add(new_row)
-
+                for n in shoulder_notes:
+                    fixed.append((new_row, n))
+                    used_rows.add(new_row)
         else:
             fixed.append((row, "; ".join(notes)))
             used_rows.add(row)
