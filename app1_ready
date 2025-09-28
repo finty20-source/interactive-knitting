@@ -57,7 +57,11 @@ def sym_increases(total_add, start_row, end_row, rows_total, label):
     parts = split_total_into_steps(per_side, steps)
     idxs  = np.linspace(0, len(rows)-1, num=steps, dtype=int)
     chosen= [rows[i] for i in idxs]
-    return [(r, f"+{v} п. {label} (с каждой стороны)") for r, v in zip(chosen, parts)]
+    out = []
+    for r, v in zip(chosen, parts):
+        out.append((r, f"+{v} п. {label} (справа)"))
+        out.append((r, f"+{v} п. {label} (слева)"))
+    return out
 
 def sym_decreases(total_sub, start_row, end_row, rows_total, label):
     if total_sub <= 0: return []
@@ -69,66 +73,113 @@ def sym_decreases(total_sub, start_row, end_row, rows_total, label):
     parts = split_total_into_steps(per_side, steps)
     idxs  = np.linspace(0, len(rows)-1, num=steps, dtype=int)
     chosen= [rows[i] for i in idxs]
-    return [(r, f"-{v} п. {label} (с каждой стороны)") for r, v in zip(chosen, parts)]
-
+    out = []
+    for r, v in zip(chosen, parts):
+        out.append((r, f"-{v} п. {label} (справа)"))
+        out.append((r, f"-{v} п. {label} (слева)"))
+    return out
 
 # -----------------------------
-# Скос плеча
+# Скос плеча (заканчивается до последнего ряда)
 # -----------------------------
-def slope_shoulder(total_stitches, start_row, end_row, rows_total):
+def slope_shoulders(total_stitches, start_row, end_row, rows_total):
+    """
+    Левое плечо — чётные ряды.
+    Правое плечо — со смещением на +1.
+    """
     if total_stitches <= 0:
-        return []
-    # ⚡️ теперь доходит до самого конца
-    rows = allowed_even_rows(start_row, end_row, rows_total, force_last=True)
+        return [], []
+
+    rows = allowed_even_rows(start_row, end_row, rows_total)
     if not rows:
-        return []
+        return [], []
+
     steps = len(rows)
     base = total_stitches // steps
     rem  = total_stitches % steps
-    actions = []
+
+    left_actions, right_actions = [], []
+
     for i, r in enumerate(rows):
         dec = base + (1 if i < rem else 0)
-        actions.append((r, f"-{dec} п. скос плеча (одно плечо)"))
-    return actions
+        left_actions.append((r, f"-{dec} п. скос плеча (левое плечо)"))
+        if r+1 <= rows_total:
+            right_actions.append((r+1, f"-{dec} п. скос плеча (правое плечо)"))
 
+    return left_actions, right_actions
 
 # -----------------------------
 # Горловина (круглая)
 # -----------------------------
-def calc_round_neckline(total_stitches, total_rows, start_row, rows_total, last_row, straight_percent=0.20):
+def calc_round_neckline(total_stitches, total_rows, start_row, rows_total, straight_spec=0.05):
+    """
+    Универсальная версия:
+    - 4 аргумента: straight_spec трактуется как процент прямых рядов вверху (например, 0.05).
+    - 5 аргументов: straight_spec может быть last_action_row (int) — последний ряд, где можно делать убавки.
+      В этом случае верхний предел возьмём min(last_action_row, rows_total-2).
+
+    Правила:
+    - первый шаг = 60% петель (доводим до чётного),
+    - последние 2 ряда полотна — прямо,
+    - минимум 2 верхних ряда горловины — прямо,
+    - последние 2 убавочных шага по горловине ≤ 1 петли,
+    - манипуляции только в чётных рядах, начиная не раньше 6-го ряда.
+    """
     if total_stitches <= 0 or total_rows <= 0:
         return []
 
-    # первый шаг = 60% и доводим до чётного
+    # 1) первый центральный шаг 60% и ДОВОДИМ ДО ЧЁТНОГО
     first_dec = int(round(total_stitches * 0.60))
     if first_dec % 2 == 1:
         first_dec += 1
     rest = total_stitches - first_dec
+    if rest < 0:
+        # если «перебрали» из-за чётности, откатим на 2 петли
+        first_dec -= 2
+        rest = total_stitches - first_dec
+        if first_dec <= 0:
+            first_dec = max(2, total_stitches - 2)
+            rest = total_stitches - first_dec
 
-    # прямые ряды перед концом = % от всей глубины
-    straight_rows = max(2, int(round(total_rows * straight_percent)))
-    neck_end_by_depth = start_row + total_rows - 1 - straight_rows
+    # 2) верхние прямые ряды
+    if isinstance(straight_spec, (int, np.integer)):
+        # передали last_action_row
+        last_action_row = int(straight_spec)
+        # дадим минимум 2 прямых верхних ряда по глубине горловины
+        straight_rows = max(2, int(round(total_rows * 0.05)))
+        neck_end_by_depth = start_row + total_rows - 1 - straight_rows
+        effective_end = min(neck_end_by_depth, last_action_row, rows_total - 2)
+    else:
+        # передали процент (или по умолчанию 0.05)
+        straight_percent = float(straight_spec)
+        straight_rows = max(2, int(round(total_rows * straight_percent)))
+        neck_end_by_depth = start_row + total_rows - 1 - straight_rows
+        effective_end = min(neck_end_by_depth, rows_total - 2)
 
-    # ⚡️ ограничиваем по last_row
-    effective_end = min(neck_end_by_depth, last_row)
-
-    rows = allowed_even_rows(start_row, effective_end, rows_total, force_last=True)
+    # 3) доступные чётные ряды
+    rows = allowed_even_rows(start_row, effective_end, rows_total)
     if not rows:
         return []
 
     actions = []
+    # первый шаг — центральное закрытие и разделение на плечи
     actions.append((rows[0], f"-{first_dec} п. горловина (середина, разделение на плечи)"))
 
+    # 4) остаток распределяем
     if rest <= 0 or len(rows) == 1:
         return actions
 
     rest_rows = rows[1:]
     steps = min(len(rest_rows), rest)
+    # чтобы не было только 2 шагов с большими числами — если можем, делаем 3
+    if steps == 2 and rest > 2 and len(rest_rows) >= 3:
+        steps = 3
+
     idxs   = np.linspace(0, len(rest_rows)-1, num=steps, dtype=int)
     chosen = [rest_rows[i] for i in idxs]
     parts  = split_total_into_steps(rest, steps)
 
-    # последние шаги делаем по 1 петле (если надо)
+    # 5) сгладим верх: последние 2 шага ≤ 1 петли, «лишнее» отдаём вниз
     if steps >= 2:
         over = 0
         for i in [steps-2, steps-1]:
@@ -188,43 +239,91 @@ def calc_round_armhole(st_chest, st_shoulders, start_row, shoulder_start_row, ro
 # Слияние действий (горловина + плечо)
 # -----------------------------
 def merge_actions(actions, rows_total):
-    """Правила:
-       - убавки горловины и плеча не могут быть в одном ряду
-       - горловина остаётся на месте (чётные ряды)
-       - скос плеча переносим на ряд выше (даже если он нечётный)"""
+    """
+    Правила:
+    - горловина и скос плеча могут совпасть только в САМОМ ПЕРВОМ ряду горловины,
+      в остальных случаях мы их разносим.
+    - горловина остаётся в своём ряду.
+    - скос переносим на +1 ряд (если занят — ищем дальше).
+    """
     merged = defaultdict(list)
     for row, note in actions:
         merged[row].append(note)
 
     fixed = []
     used_rows = set()
+    first_neck_row = None  # запомним первый ряд горловины
+
+    # сначала найдём первый ряд горловины
+    for row in sorted(merged.keys()):
+        if any("горловина" in n for n in merged[row]):
+            first_neck_row = row
+            break
 
     for row in sorted(merged.keys()):
         notes = merged[row]
 
         if ("горловина" in " ".join(notes)) and ("скос плеча" in " ".join(notes)):
-            shoulder_notes = [n for n in notes if "скос плеча" in n]
-            neck_notes     = [n for n in notes if "горловина" in n]
+            # если это первый ряд горловины → оставляем вместе
+            if row == first_neck_row:
+                fixed.append((row, "; ".join(notes)))
+                used_rows.add(row)
+            else:
+                # разделяем: горловина в своём ряду, скос переносим выше
+                shoulder_notes = [n for n in notes if "скос плеча" in n]
+                neck_notes     = [n for n in notes if "горловина" in n]
 
-            fixed.append((row, "; ".join(neck_notes)))
-            used_rows.add(row)
+                fixed.append((row, "; ".join(neck_notes)))
+                used_rows.add(row)
 
-            new_row = row - 1 if row > 1 else row + 1
-            while new_row in used_rows and new_row < rows_total:
-                new_row += 1
+                new_row = row + 1
+                while new_row in used_rows and new_row < rows_total:
+                    new_row += 1
 
-            for n in shoulder_notes:
-                fixed.append((new_row, n))
-                used_rows.add(new_row)
-
+                for n in shoulder_notes:
+                    fixed.append((new_row, n))
+                    used_rows.add(new_row)
         else:
             fixed.append((row, "; ".join(notes)))
             used_rows.add(row)
 
+    return sorted(fixed, key=lambda x: int(str(x[0]).split('-')[0]))
+
+# -----------------------------
+# Учёт стороны каретки
+# -----------------------------
+def fix_carriage_side(actions, method=None):
+    """
+    Стандартные: убавки со стороны каретки.
+    Частичное:   убавки с противоположной стороны.
+    Нечётные ряды → каретка справа; чётные → каретка слева.
+    """
+    if method is None:
+        method = st.session_state.get("method", "Стандартные (со стороны каретки)")
+
+    use_std = method.startswith("Стандартные")
+    fixed = []
+
+    for r, note in actions:
+        note_lower = note.lower()
+
+        # где "правильно" делать убавку в этом ряду
+        if r % 2 == 1:  # нечётный: каретка справа
+            correct_side = "справа" if use_std else "слева"
+        else:           # чётный: каретка слева
+            correct_side = "слева" if use_std else "справа"
+
+        # переносим только те действия, где сторона указана явным словом
+        if (("справа" in note_lower) or ("слева" in note_lower)) and (correct_side not in note_lower):
+            new_r = r - 1 if r > 1 else r + 1
+            fixed.append((new_r, note))
+        else:
+            fixed.append((r, note))
+
     return fixed
 
 # -----------------------------
-# Таблица + сегменты
+# Сегменты по рядам
 # -----------------------------
 def section_tags(row, rows_to_armhole_end, neck_start_row, shoulder_start_row):
     tags = []
@@ -237,45 +336,69 @@ def section_tags(row, rows_to_armhole_end, neck_start_row, shoulder_start_row):
     if shoulder_start_row and row >= shoulder_start_row:
         tags.append("Скос плеча")
     return " + ".join(tags) if tags else "—"
-
-def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, shoulder_start_row, last_row):
+    
+# -----------------------------
+# Таблица + сегменты
+# -----------------------------
+def make_table_full(actions, rows_count, rows_to_armhole_end, neck_start_row, shoulder_start_row, key=None):
     merged = defaultdict(list)
     for row, note in actions:
-        merged[row].append(note)
+        if 1 <= row <= rows_count:
+            merged[row].append(note)
 
+    rows_sorted = sorted(merged.keys())
     table_rows = []
     prev = 1
 
-    # проходим по всем рядам до конца
-    for r in range(1, last_row + 1):
-        if r in merged:
-            # сначала закрываем прямой участок, если он был
-            if prev < r:
+    if not rows_sorted:
+        seg = section_tags(1, rows_to_armhole_end, neck_start_row, shoulder_start_row)
+        table_rows.append((f"1-{rows_count}", "Прямо", seg))
+    else:
+        for r in rows_sorted:
+            if r > prev:
                 seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
-                if prev == r - 1:
+                if prev == r-1:
                     table_rows.append((str(prev), "Прямо", seg))
                 else:
                     table_rows.append((f"{prev}-{r-1}", "Прямо", seg))
-            # потом добавляем действие
-            seg = section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)
-            table_rows.append((str(r), "; ".join(merged[r]), seg))
+            table_rows.append((str(r), "; ".join(merged[r]),
+                               section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
             prev = r + 1
 
-    # если после последнего действия остались прямые ряды
-    if prev <= last_row:
-        seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
-        if prev == last_row:
-            table_rows.append((str(prev), "Прямо", seg))
-        else:
-            table_rows.append((f"{prev}-{last_row}", "Прямо", seg))
+        last_action_row = max(rows_sorted)
+        if prev <= last_action_row:
+            seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
+            if prev == last_action_row:
+                table_rows.append((str(prev), "Прямо", seg))
+            else:
+                table_rows.append((f"{prev}-{last_action_row}", "Прямо", seg))
 
     df = pd.DataFrame(table_rows, columns=["Ряды", "Действия", "Сегмент"])
     st.dataframe(df, use_container_width=True, hide_index=True)
+
+    if key:
+        st.session_state[key] = table_rows
+
+def parse_inputs():
+    return (
+        float(density_st_str.replace(",", ".")),
+        float(density_row_str.replace(",", ".")),
+        float(hip_cm_str.replace(",", ".")),
+        float(chest_cm_str.replace(",", ".")),
+        float(length_cm_str.replace(",", ".")),
+        float(armhole_depth_cm_str.replace(",", ".")),
+        float(neck_width_cm_str.replace(",", ".")),
+        float(neck_depth_cm_str.replace(",", ".")),
+        float(neck_depth_back_cm_str.replace(",", ".")),
+        float(shoulder_len_cm_str.replace(",", ".")),
+        float(shoulder_slope_cm_str.replace(",", "."))
+    )
 
 # -----------------------------
 # Ввод параметров
 # -----------------------------
 st.header("Перед / Спинка")
+
 
 density_st_str   = st.text_input("Плотность: петли в 10 см", placeholder="введите плотность")
 density_row_str  = st.text_input("Плотность: ряды в 10 см",  placeholder="введите плотность")
@@ -294,12 +417,19 @@ shoulder_len_cm_str    = st.text_input("Длина плеча (см)", placehold
 shoulder_slope_cm_str  = st.text_input("Скос плеча (см)", placeholder="введите высоту")
 
 # -----------------------------
+# Выбор метода убавок
+# -----------------------------
+method = st.selectbox(
+    "Метод убавок",
+    ["Стандартные (со стороны каретки)", "Частичное вязание (поворотные ряды)"],
+    index=0
+)
+
+# -----------------------------
 # Кнопка расчёта
 # -----------------------------
 if st.button("🔄 Рассчитать"):
-    # -----------------------------
-    # Проверка заполненности всех полей
-    # -----------------------------
+
     inputs = [
         density_st_str, density_row_str,
         hip_cm_str, chest_cm_str, length_cm_str,
@@ -313,28 +443,20 @@ if st.button("🔄 Рассчитать"):
         st.stop()
 
     try:
-        density_st         = float(density_st_str.replace(",", "."))
-        density_row        = float(density_row_str.replace(",", "."))
-        hip_cm             = float(hip_cm_str.replace(",", "."))
-        chest_cm           = float(chest_cm_str.replace(",", "."))
-        length_cm          = float(length_cm_str.replace(",", "."))
-        armhole_depth_cm   = float(armhole_depth_cm_str.replace(",", "."))
-        neck_width_cm      = float(neck_width_cm_str.replace(",", "."))
-        neck_depth_cm      = float(neck_depth_cm_str.replace(",", "."))
-        neck_depth_back_cm = float(neck_depth_back_cm_str.replace(",", "."))
-        shoulder_len_cm    = float(shoulder_len_cm_str.replace(",", "."))
-        shoulder_slope_cm  = float(shoulder_slope_cm_str.replace(",", "."))
+        (density_st, density_row, hip_cm, chest_cm, length_cm,
+         armhole_depth_cm, neck_width_cm, neck_depth_cm, neck_depth_back_cm,
+         shoulder_len_cm, shoulder_slope_cm) = parse_inputs()
     except:
-        st.error("⚠️ Пожалуйста, вводите только числа (можно с точкой или запятой)")
+        st.error("⚠️ Введите только числа (можно с точкой или запятой)")
         st.stop()
 
     # -----------------------------
     # Пересчёт в петли/ряды
     # -----------------------------
-    st_hip     = cm_to_st(hip_cm, density_st)        # низ
-    st_chest   = cm_to_st(chest_cm, density_st)      # грудь
-    rows_total = cm_to_rows(length_cm, density_row)  # вся высота изделия
-    rows_armh  = cm_to_rows(armhole_depth_cm, density_row)  # глубина проймы
+    st_hip     = cm_to_st(hip_cm, density_st)
+    st_chest   = cm_to_st(chest_cm, density_st)
+    rows_total = cm_to_rows(length_cm, density_row)
+    rows_armh  = cm_to_rows(armhole_depth_cm, density_row)
 
     neck_st    = cm_to_st(neck_width_cm, density_st)
     neck_rows_front  = cm_to_rows(neck_depth_cm, density_row)
@@ -343,20 +465,15 @@ if st.button("🔄 Рассчитать"):
     st_shldr   = cm_to_st(shoulder_len_cm, density_st)
     rows_slope = cm_to_rows(shoulder_slope_cm, density_row)
 
-    st_shoulders = 2 * st_shldr + neck_st   # скрытая ширина по плечам
+    st_shoulders = 2 * st_shldr + neck_st
+    rows_bottom  = rows_total - rows_armh - rows_slope
 
-    # низ = вся высота - пройма - плечо
-    rows_bottom = rows_total - rows_armh - rows_slope
-
-    # начало и конец этапов
     armhole_start_row   = rows_bottom + 1
     shoulder_start_row  = rows_total - rows_slope + 1
     armhole_end_row     = shoulder_start_row - 1
+    rows_to_armhole_end = rows_bottom
+    last_action_row     = rows_total - 1  # последний ряд = убавка, не закрытие
 
-    # последний ряд изделия (окончание плеча)
-    last_row = shoulder_start_row + rows_slope - 1
-
-    # начало горловин
     neck_start_row_front = rows_total - neck_rows_front + 1
     neck_start_row_back  = rows_total - neck_rows_back + 1
 
@@ -372,57 +489,101 @@ if st.button("🔄 Рассчитать"):
     # -----------------------------
     st.subheader("📋 Инструкция для переда")
     actions = []
-
     delta_bottom = st_chest - st_hip
     if delta_bottom > 0:
         actions += sym_increases(delta_bottom, 6, rows_bottom, rows_total, "бок")
     elif delta_bottom < 0:
         actions += sym_decreases(-delta_bottom, 6, rows_bottom, rows_total, "бок")
 
-    # пройма
     actions += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
-
-    # горловина (20% прямых рядов по умолчанию)
-    actions += calc_round_neckline(neck_st, neck_rows_front, neck_start_row_front, rows_total, last_row)
-
-    # плечо
-    actions += slope_shoulder(st_shldr, shoulder_start_row, last_row, rows_total)
-
-    # ⚡️ не дать горловине и плечу совпасть в один ряд
+    actions += calc_round_neckline(
+    neck_st,
+    neck_rows_front,
+    neck_start_row_front,
+    rows_total,
+    last_action_row
+)
+    actions_left, actions_right = slope_shoulders(st_shldr, shoulder_start_row, rows_total, rows_total)
+    actions += actions_left + actions_right
     actions = merge_actions(actions, rows_total)
+    actions = fix_carriage_side(actions, method)  # ⚡️ учитываем сторону каретки
+    make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, key="table_front")
 
-    make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, last_row)
-
-    # -----------------------------
-    # 📋 Спинка
-    # -----------------------------
+    # ----- СПИНКА -----
     st.subheader("📋 Инструкция для спинки")
     actions_back = []
 
+    # 1. Низ (разница между шириной низа и грудью)
     delta_bottom = st_chest - st_hip
     if delta_bottom > 0:
-        actions_back += sym_increases(delta_bottom, 6, rows_bottom, rows_total, "бок")
+        actions_back += sym_increases(delta_bottom, 6, rows_to_armhole_end, rows_total, "бок")
     elif delta_bottom < 0:
-        actions_back += sym_decreases(-delta_bottom, 6, rows_bottom, rows_total, "бок")
+        actions_back += sym_decreases(-delta_bottom, 6, rows_to_armhole_end, rows_total, "бок")
 
-    # пройма
-    actions_back += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
+    # 2. Пройма
+    delta_armh = st_shoulders - st_chest
+    armhole_start_row = rows_to_armhole_end + 1
+    armhole_end_row   = shoulder_start_row - 1
+    if delta_armh > 0:
+        actions_back += sym_increases(delta_armh, armhole_start_row, armhole_end_row, rows_total, "пройма")
+    elif delta_armh < 0:
+        actions_back += sym_decreases(-delta_armh, armhole_start_row, armhole_end_row, rows_total, "пройма")
 
-    # горловина спинки: прямые ряды = 2%
-    actions_back += calc_round_neckline(
-        neck_st, neck_rows_back, neck_start_row_back, rows_total, last_row, straight_percent=0.02
-    )
+    # 3. Горловина (спинка)
+    actions_back += calc_round_neckline(neck_st, neck_rows_back, neck_start_row_back, rows_total)
 
-    # плечо
-    actions_back += slope_shoulder(st_shldr, shoulder_start_row, last_row, rows_total)
+    # 4. Скос плеча (отдельно левое + правое)
+    actions_left_back, actions_right_back = slope_shoulders(st_shldr, shoulder_start_row, rows_total, rows_total)
+    actions_back += actions_left_back + actions_right_back
 
-    # ⚡️ не дать горловине и плечу совпасть
+    # 5. Слияние и вывод таблицы
     actions_back = merge_actions(actions_back, rows_total)
+    actions_back = fix_carriage_side(actions_back, method)  # ⚡️ если используешь сторону каретки
+    make_table_full(actions_back, rows_total, rows_to_armhole_end, neck_start_row_back, shoulder_start_row, key="table_back")
+    actions_back += calc_round_neckline(
+    neck_st,
+    neck_rows_back,
+    neck_start_row_back,
+    rows_total,
+    last_action_row
+)
+    # -----------------------------
+    # сохраняем для PDF
+    # -----------------------------
+    st.session_state.actions = actions
+    st.session_state.actions_back = actions_back
+    st.session_state.st_hip = st_hip
+    st.session_state.rows_total = rows_total
+    st.session_state.rows_bottom = rows_bottom
 
-    make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row, last_row)
-    # -----------------------------
-    # сохраняем результаты для PDF
-    # -----------------------------
+    # пересчёт в петли/ряды
+    st_hip     = cm_to_st(hip_cm, density_st)
+    st_chest   = cm_to_st(chest_cm, density_st)
+    rows_total = cm_to_rows(length_cm, density_row)
+    rows_armh  = cm_to_rows(armhole_depth_cm, density_row)
+
+    neck_st    = cm_to_st(neck_width_cm, density_st)
+    neck_rows_front  = cm_to_rows(neck_depth_cm, density_row)
+    neck_rows_back   = cm_to_rows(neck_depth_back_cm, density_row)
+
+    st_shldr   = cm_to_st(shoulder_len_cm, density_st)
+    rows_slope = cm_to_rows(shoulder_slope_cm, density_row)
+
+    st_shoulders = 2 * st_shldr + neck_st
+    rows_bottom  = rows_total - rows_armh - rows_slope
+
+    armhole_start_row   = rows_bottom + 1
+    shoulder_start_row  = rows_total - rows_slope + 1
+    armhole_end_row     = shoulder_start_row - 1
+
+    # последний ряд — закрытие; манипуляции до rows_total-1
+    last_action_row = rows_total - 1
+
+    # старт горловин относительно last_action_row (чтобы не «раньше времени»)
+    neck_start_row_front = last_action_row - neck_rows_front + 1
+    neck_start_row_back  = last_action_row - neck_rows_back + 1
+
+    # сохранить для PDF
     st.session_state.actions = actions
     st.session_state.actions_back = actions_back
     st.session_state.st_hip = st_hip
@@ -472,7 +633,7 @@ if st.session_state.actions and st.session_state.actions_back:
 
     # Таблица переда
     elements.append(Paragraph("Инструкция для переда", styles['Heading2']))
-    tbl_front = Table([[r, n] for r, n in st.session_state.actions], hAlign="LEFT")
+    tbl_front = Table(st.session_state.table_front, hAlign="LEFT")
     tbl_front.setStyle(TableStyle([
         ("FONTNAME", (0,0), (-1,-1), "DejaVuSans"),
         ("FONTSIZE", (0,0), (-1,-1), 10),
@@ -483,7 +644,7 @@ if st.session_state.actions and st.session_state.actions_back:
 
     # Таблица спинки
     elements.append(Paragraph("Инструкция для спинки", styles['Heading2']))
-    tbl_back = Table([[r, n] for r, n in st.session_state.actions_back], hAlign="LEFT")
+    tbl_back = Table(st.session_state.table_back, hAlign="LEFT")
     tbl_back.setStyle(TableStyle([
         ("FONTNAME", (0,0), (-1,-1), "DejaVuSans"),
         ("FONTSIZE", (0,0), (-1,-1), 10),
