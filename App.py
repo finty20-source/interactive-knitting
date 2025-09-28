@@ -406,6 +406,23 @@ if manual_btn:
     neck_start_row_back  = rows_total - neck_rows_back + 1
 
     # -----------------------------
+    # Последние ряды и начало горловин
+    # -----------------------------
+    if manual_btn:
+        # 🧵 Ручное вязание: последний ряд = закрытие
+        last_row = rows_total
+        neck_start_row_front = rows_total - neck_rows_front + 1
+        neck_start_row_back  = rows_total - neck_rows_back + 1
+        st.subheader("📊 Сводка (ручное вязание)")
+
+    elif machine_btn:
+        # 🪡 Машинное вязание: последний ряд отдаём под закрытие
+        last_row = rows_total - 1
+        neck_start_row_front = last_row - neck_rows_front + 1
+        neck_start_row_back  = last_row - neck_rows_back + 1
+        st.subheader("📊 Сводка (машинное вязание)")
+
+    # -----------------------------
     # 📊 Сводка
     # -----------------------------
     st.subheader("📊 Сводка (ручное вязание)")
