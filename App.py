@@ -111,56 +111,90 @@ def slope_shoulders(total_stitches, start_row, end_row, rows_total):
 # -----------------------------
 # Горловина (круглая)
 # -----------------------------
-def calc_round_neckline(total_stitches, total_rows, start_row, rows_total, last_row, straight_percent=0.20):
-    """Рассчёт убавок для круглой горловины.
-       total_stitches – ширина горловины в петлях,
-       total_rows     – глубина горловины в рядах,
-       start_row      – ряд начала горловины,
-       rows_total     – всего рядов в изделии,
-       last_row       – последний ряд для манипуляций,
-       straight_percent – % прямых рядов в конце (без убавок).
+def calc_round_neckline(total_stitches, total_rows, start_row, rows_total, straight_spec=0.05):
+    """
+    Универсальная версия:
+    - 4 аргумента: straight_spec трактуется как процент прямых рядов вверху (например, 0.05).
+    - 5 аргументов: straight_spec может быть last_action_row (int) — последний ряд, где можно делать убавки.
+      В этом случае верхний предел возьмём min(last_action_row, rows_total-2).
+
+    Правила:
+    - первый шаг = 60% петель (доводим до чётного),
+    - последние 2 ряда полотна — прямо,
+    - минимум 2 верхних ряда горловины — прямо,
+    - последние 2 убавочных шага по горловине ≤ 1 петли,
+    - манипуляции только в чётных рядах, начиная не раньше 6-го ряда.
     """
     if total_stitches <= 0 or total_rows <= 0:
         return []
 
-    # Первый шаг — крупное убавление (≈60%)
+    # 1) первый центральный шаг 60% и ДОВОДИМ ДО ЧЁТНОГО
     first_dec = int(round(total_stitches * 0.60))
     if first_dec % 2 == 1:
         first_dec += 1
     rest = total_stitches - first_dec
+    if rest < 0:
+        # если «перебрали» из-за чётности, откатим на 2 петли
+        first_dec -= 2
+        rest = total_stitches - first_dec
+        if first_dec <= 0:
+            first_dec = max(2, total_stitches - 2)
+            rest = total_stitches - first_dec
 
-    # Прямые ряды в конце
-    straight_rows = max(2, int(round(total_rows * straight_percent)))
-    neck_end_by_depth = start_row + total_rows - 1 - straight_rows
-    effective_end = min(neck_end_by_depth, last_row)
+    # 2) верхние прямые ряды
+    if isinstance(straight_spec, (int, np.integer)):
+        # передали last_action_row
+        last_action_row = int(straight_spec)
+        # дадим минимум 2 прямых верхних ряда по глубине горловины
+        straight_rows = max(2, int(round(total_rows * 0.05)))
+        neck_end_by_depth = start_row + total_rows - 1 - straight_rows
+        effective_end = min(neck_end_by_depth, last_action_row, rows_total - 2)
+    else:
+        # передали процент (или по умолчанию 0.05)
+        straight_percent = float(straight_spec)
+        straight_rows = max(2, int(round(total_rows * straight_percent)))
+        neck_end_by_depth = start_row + total_rows - 1 - straight_rows
+        effective_end = min(neck_end_by_depth, rows_total - 2)
 
-    rows = allowed_even_rows(start_row, effective_end, rows_total, force_last=True)
+    # 3) доступные чётные ряды
+    rows = allowed_even_rows(start_row, effective_end, rows_total)
     if not rows:
         return []
 
     actions = []
-    # Центральное закрытие
+    # первый шаг — центральное закрытие и разделение на плечи
     actions.append((rows[0], f"-{first_dec} п. горловина (середина, разделение на плечи)"))
 
-    # Если остатка нет — всё готово
+    # 4) остаток распределяем
     if rest <= 0 or len(rows) == 1:
         return actions
 
-    # Остаточные убавки
     rest_rows = rows[1:]
-    steps = min(len(rest_rows), rest)  # шагов не больше остатка
-    if steps <= 0:
-        return actions
+    steps = min(len(rest_rows), rest)
+    # чтобы не было только 2 шагов с большими числами — если можем, делаем 3
+    if steps == 2 and rest > 2 and len(rest_rows) >= 3:
+        steps = 3
 
     idxs   = np.linspace(0, len(rest_rows)-1, num=steps, dtype=int)
     chosen = [rest_rows[i] for i in idxs]
     parts  = split_total_into_steps(rest, steps)
 
-    # Добавляем симметричные убавки по сторонам
+    # 5) сгладим верх: последние 2 шага ≤ 1 петли, «лишнее» отдаём вниз
+    if steps >= 2:
+        over = 0
+        for i in [steps-2, steps-1]:
+            if parts[i] > 1:
+                over += parts[i] - 1
+                parts[i] = 1
+        jmax = max(1, steps-2)
+        j = 0
+        while over > 0 and jmax > 0:
+            parts[j % jmax] += 1
+            over -= 1
+            j += 1
+
     for r, v in zip(chosen, parts):
-        if v > 0:
-            actions.append((r, f"-{v} п. горловина (справа)"))
-            actions.append((r, f"-{v} п. горловина (слева)"))
+        actions.append((r, f"-{v} п. горловина (каждое плечо)"))
 
     return actions
 
