@@ -322,6 +322,21 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
     if key:
         st.session_state[key] = table_rows
 
+def parse_inputs():
+    return (
+        float(density_st_str.replace(",", ".")),
+        float(density_row_str.replace(",", ".")),
+        float(hip_cm_str.replace(",", ".")),
+        float(chest_cm_str.replace(",", ".")),
+        float(length_cm_str.replace(",", ".")),
+        float(armhole_depth_cm_str.replace(",", ".")),
+        float(neck_width_cm_str.replace(",", ".")),
+        float(neck_depth_cm_str.replace(",", ".")),
+        float(neck_depth_back_cm_str.replace(",", ".")),
+        float(shoulder_len_cm_str.replace(",", ".")),
+        float(shoulder_slope_cm_str.replace(",", "."))
+    )
+
 # -----------------------------
 # Ввод параметров
 # -----------------------------
