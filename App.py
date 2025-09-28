@@ -73,30 +73,22 @@ def sym_decreases(total_sub, start_row, end_row, rows_total, label):
 
 
 # -----------------------------
-# Скос плеча
+# Скос плеча (заканчивается до ряда закрытия)
 # -----------------------------
 def slope_shoulder(total_stitches, start_row, end_row, rows_total):
-    """Скос плеча: убавки распределяются по всем рядам.
-       В чётных рядах – одно плечо, в нечётных – второе."""
     if total_stitches <= 0:
         return []
-
-    rows = list(range(start_row, end_row + 1))  # теперь все ряды подряд
-    steps = len(rows)
-    if steps <= 0:
+    # последний ряд оставляем под закрытие
+    rows = allowed_even_rows(start_row, end_row, rows_total - 1, force_last=True)
+    if not rows:
         return []
-
+    steps = len(rows)
     base = total_stitches // steps
     rem  = total_stitches % steps
-
     actions = []
     for i, r in enumerate(rows):
         dec = base + (1 if i < rem else 0)
-        if r % 2 == 0:
-            actions.append((r, f"-{dec} п. скос плеча (левое плечо)"))
-        else:
-            actions.append((r, f"-{dec} п. скос плеча (правое плечо)"))
-
+        actions.append((r, f"-{dec} п. скос плеча (одно плечо)"))
     return actions
 
 # -----------------------------
@@ -266,7 +258,7 @@ def section_tags(row, rows_to_armhole_end, neck_start_row, shoulder_start_row):
     return " + ".join(tags) if tags else "—"
 
 
-def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, shoulder_start_row, last_row, key=None):
+def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, shoulder_start_row, key=None):
     merged = defaultdict(list)
     for row, note in actions:
         merged[row].append(note)
@@ -277,7 +269,7 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
 
     if not rows_sorted:
         seg = section_tags(1, rows_to_armhole_end, neck_start_row, shoulder_start_row)
-        table_rows.append((f"1-{last_row}", "Прямо", seg))
+        table_rows.append((f"1-{rows_total}", "Прямо", seg))
     else:
         for r in rows_sorted:
             if r > prev:
@@ -290,17 +282,19 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
                                section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
             prev = r + 1
 
+    # 👉 последний ряд = ряд закрытия
+    last_row = rows_total
     if prev <= last_row:
         seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
         if prev == last_row:
-            table_rows.append((str(prev), "Прямо", seg))
+            table_rows.append((str(prev), "Прямо (закрытие)", seg))
         else:
-            table_rows.append((f"{prev}-{last_row}", "Прямо", seg))
+            table_rows.append((f"{prev}-{last_row}", "Прямо (закрытие)", seg))
 
     df = pd.DataFrame(table_rows, columns=["Ряды", "Действия", "Сегмент"])
     st.dataframe(df, use_container_width=True, hide_index=True)
 
-    # ⚡️ сохраняем таблицу в session_state, чтобы PDF мог её достать
+    # ⚡️ сохраняем таблицу для PDF
     if key:
         st.session_state[key] = table_rows
 
