@@ -456,7 +456,7 @@ if st.button("🔄 Рассчитать"):
     actions = fix_carriage_side(actions, method)  # ⚡️ учитываем сторону каретки
     make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, key="table_front")
 
-# ----- СПИНКА -----
+    # ----- СПИНКА -----
 st.subheader("📋 Инструкция для спинки")
 actions_back = []
 
