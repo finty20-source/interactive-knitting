@@ -266,30 +266,31 @@ def section_tags(row, rows_to_armhole_end, neck_start_row, shoulder_start_row):
     return " + ".join(tags) if tags else "—"
 
 
-def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, shoulder_start_row, last_row, key):
+def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, shoulder_start_row, last_row):
     merged = defaultdict(list)
     for row, note in actions:
         merged[row].append(note)
 
+    rows_sorted = sorted(merged.keys())
     table_rows = []
     prev = 1
 
-    # проходим по всем рядам до конца
-    for r in range(1, last_row + 1):
-        if r in merged:
-            # сначала закрываем прямой участок, если он был
-            if prev < r:
+    if not rows_sorted:
+        seg = section_tags(1, rows_to_armhole_end, neck_start_row, shoulder_start_row)
+        table_rows.append((f"1-{last_row}", "Прямо", seg))
+    else:
+        for r in rows_sorted:
+            if r > prev:
                 seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
-                if prev == r - 1:
+                if prev == r-1:
                     table_rows.append((str(prev), "Прямо", seg))
                 else:
                     table_rows.append((f"{prev}-{r-1}", "Прямо", seg))
-            # потом добавляем действие
-            seg = section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)
-            table_rows.append((str(r), "; ".join(merged[r]), seg))
+            table_rows.append((str(r), "; ".join(merged[r]),
+                               section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
             prev = r + 1
 
-    # если после последнего действия остались прямые ряды
+    # конец = именно last_row (а не rows_total)
     if prev <= last_row:
         seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
         if prev == last_row:
@@ -297,10 +298,6 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
         else:
             table_rows.append((f"{prev}-{last_row}", "Прямо", seg))
 
-    # сохраняем таблицу в session_state (для PDF)
-    st.session_state[key] = table_rows
-
-    # показываем в приложении
     df = pd.DataFrame(table_rows, columns=["Ряды", "Действия", "Сегмент"])
     st.dataframe(df, use_container_width=True, hide_index=True)
 
