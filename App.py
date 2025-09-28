@@ -326,51 +326,63 @@ shoulder_len_cm_str    = st.text_input("Длина плеча (см)", placehold
 shoulder_slope_cm_str  = st.text_input("Скос плеча (см)", placeholder="введите высоту")
 
 # -----------------------------
-# Кнопка расчёта
+# Кнопки расчёта
 # -----------------------------
 col1, col2 = st.columns(2)
 with col1:
     manual_btn = st.button("🔄 Рассчитать (ручное вязание)")
 with col2:
     machine_btn = st.button("🔄 Рассчитать (машинное вязание)")
-    # -----------------------------
-    # Проверка заполненности всех полей
-    # -----------------------------
-    inputs = [
-        density_st_str, density_row_str,
-        hip_cm_str, chest_cm_str, length_cm_str,
-        armhole_depth_cm_str,
-        neck_width_cm_str, neck_depth_cm_str, neck_depth_back_cm_str,
-        shoulder_len_cm_str, shoulder_slope_cm_str
-    ]
 
+# -----------------------------
+# Проверка заполненности
+# -----------------------------
+inputs = [
+    density_st_str, density_row_str,
+    hip_cm_str, chest_cm_str, length_cm_str,
+    armhole_depth_cm_str,
+    neck_width_cm_str, neck_depth_cm_str, neck_depth_back_cm_str,
+    shoulder_len_cm_str, shoulder_slope_cm_str
+]
+
+def parse_inputs():
+    return (
+        float(density_st_str.replace(",", ".")),
+        float(density_row_str.replace(",", ".")),
+        float(hip_cm_str.replace(",", ".")),
+        float(chest_cm_str.replace(",", ".")),
+        float(length_cm_str.replace(",", ".")),
+        float(armhole_depth_cm_str.replace(",", ".")),
+        float(neck_width_cm_str.replace(",", ".")),
+        float(neck_depth_cm_str.replace(",", ".")),
+        float(neck_depth_back_cm_str.replace(",", ".")),
+        float(shoulder_len_cm_str.replace(",", ".")),
+        float(shoulder_slope_cm_str.replace(",", "."))
+    )
+
+# -----------------------------
+# Ветка: ручное вязание
+# -----------------------------
+if manual_btn:
     if not all(inputs):
         st.error("⚠️ Заполните все поля перед расчётом")
         st.stop()
 
     try:
-        density_st         = float(density_st_str.replace(",", "."))
-        density_row        = float(density_row_str.replace(",", "."))
-        hip_cm             = float(hip_cm_str.replace(",", "."))
-        chest_cm           = float(chest_cm_str.replace(",", "."))
-        length_cm          = float(length_cm_str.replace(",", "."))
-        armhole_depth_cm   = float(armhole_depth_cm_str.replace(",", "."))
-        neck_width_cm      = float(neck_width_cm_str.replace(",", "."))
-        neck_depth_cm      = float(neck_depth_cm_str.replace(",", "."))
-        neck_depth_back_cm = float(neck_depth_back_cm_str.replace(",", "."))
-        shoulder_len_cm    = float(shoulder_len_cm_str.replace(",", "."))
-        shoulder_slope_cm  = float(shoulder_slope_cm_str.replace(",", "."))
+        (density_st, density_row, hip_cm, chest_cm, length_cm,
+         armhole_depth_cm, neck_width_cm, neck_depth_cm, neck_depth_back_cm,
+         shoulder_len_cm, shoulder_slope_cm) = parse_inputs()
     except:
-        st.error("⚠️ Пожалуйста, вводите только числа (можно с точкой или запятой)")
+        st.error("⚠️ Введите только числа (можно с точкой или запятой)")
         st.stop()
 
     # -----------------------------
     # Пересчёт в петли/ряды
     # -----------------------------
-    st_hip     = cm_to_st(hip_cm, density_st)        # низ
-    st_chest   = cm_to_st(chest_cm, density_st)      # грудь
-    rows_total = cm_to_rows(length_cm, density_row)  # вся высота изделия
-    rows_armh  = cm_to_rows(armhole_depth_cm, density_row)  # глубина проймы
+    st_hip     = cm_to_st(hip_cm, density_st)
+    st_chest   = cm_to_st(chest_cm, density_st)
+    rows_total = cm_to_rows(length_cm, density_row)
+    rows_armh  = cm_to_rows(armhole_depth_cm, density_row)
 
     neck_st    = cm_to_st(neck_width_cm, density_st)
     neck_rows_front  = cm_to_rows(neck_depth_cm, density_row)
@@ -379,27 +391,21 @@ with col2:
     st_shldr   = cm_to_st(shoulder_len_cm, density_st)
     rows_slope = cm_to_rows(shoulder_slope_cm, density_row)
 
-    st_shoulders = 2 * st_shldr + neck_st   # скрытая ширина по плечам
+    st_shoulders = 2 * st_shldr + neck_st
+    rows_bottom  = rows_total - rows_armh - rows_slope
 
-    # низ = вся высота - пройма - плечо
-    rows_bottom = rows_total - rows_armh - rows_slope
-
-    # начало и конец этапов
     armhole_start_row   = rows_bottom + 1
     shoulder_start_row  = rows_total - rows_slope + 1
     armhole_end_row     = shoulder_start_row - 1
+    last_row            = shoulder_start_row + rows_slope - 1
 
-    # последний ряд изделия (окончание плеча)
-    last_row = shoulder_start_row + rows_slope - 1
-
-    # начало горловин
     neck_start_row_front = rows_total - neck_rows_front + 1
     neck_start_row_back  = rows_total - neck_rows_back + 1
 
     # -----------------------------
     # 📊 Сводка
     # -----------------------------
-    st.subheader("📊 Сводка")
+    st.subheader("📊 Сводка (ручное вязание)")
     st.write(f"- Набрать петель: **{st_hip}**")
     st.write(f"- Всего рядов: **{rows_total}**")
 
@@ -408,7 +414,112 @@ with col2:
     # -----------------------------
     st.subheader("📋 Инструкция для переда")
     actions = []
+    delta_bottom = st_chest - st_hip
+    if delta_bottom > 0:
+        actions += sym_increases(delta_bottom, 6, rows_bottom, rows_total, "бок")
+    elif delta_bottom < 0:
+        actions += sym_decreases(-delta_bottom, 6, rows_bottom, rows_total, "бок")
+    actions += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
+    actions += calc_round_neckline(neck_st, neck_rows_front, neck_start_row_front, rows_total, last_row)
+    actions += slope_shoulder(st_shldr, shoulder_start_row, last_row, rows_total)
+    actions = merge_actions(actions, rows_total)
+    make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, last_row)
 
+    # -----------------------------
+    # 📋 Спинка
+    # -----------------------------
+    st.subheader("📋 Инструкция для спинки")
+    actions_back = []
+    if delta_bottom > 0:
+        actions_back += sym_increases(delta_bottom, 6, rows_bottom, rows_total, "бок")
+    elif delta_bottom < 0:
+        actions_back += sym_decreases(-delta_bottom, 6, rows_bottom, rows_total, "бок")
+    actions_back += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
+    actions_back += calc_round_neckline(neck_st, neck_rows_back, neck_start_row_back, rows_total, last_row, straight_percent=0.02)
+    actions_back += slope_shoulder(st_shldr, shoulder_start_row, last_row, rows_total)
+    actions_back = merge_actions(actions_back, rows_total)
+    make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row, last_row)
+
+# -----------------------------
+# Ветка: машинное вязание
+# -----------------------------
+if machine_btn:
+    if not all(inputs):
+        st.error("⚠️ Заполните все поля перед расчётом")
+        st.stop()
+
+    try:
+        (density_st, density_row, hip_cm, chest_cm, length_cm,
+         armhole_depth_cm, neck_width_cm, neck_depth_cm, neck_depth_back_cm,
+         shoulder_len_cm, shoulder_slope_cm) = parse_inputs()
+    except:
+        st.error("⚠️ Введите только числа (можно с точкой или запятой)")
+        st.stop()
+
+    # -----------------------------
+    # Пересчёт в петли/ряды
+    # -----------------------------
+    st_hip     = cm_to_st(hip_cm, density_st)
+    st_chest   = cm_to_st(chest_cm, density_st)
+    rows_total = cm_to_rows(length_cm, density_row)
+    rows_armh  = cm_to_rows(armhole_depth_cm, density_row)
+
+    neck_st    = cm_to_st(neck_width_cm, density_st)
+    neck_rows_front  = cm_to_rows(neck_depth_cm, density_row)
+    neck_rows_back   = cm_to_rows(neck_depth_back_cm, density_row)
+
+    st_shldr   = cm_to_st(shoulder_len_cm, density_st)
+    rows_slope = cm_to_rows(shoulder_slope_cm, density_row)
+
+    st_shoulders = 2 * st_shldr + neck_st
+    rows_bottom  = rows_total - rows_armh - rows_slope
+
+    armhole_start_row   = rows_bottom + 1
+    shoulder_start_row  = rows_total - rows_slope + 1
+    armhole_end_row     = shoulder_start_row - 1
+    last_row            = shoulder_start_row + rows_slope - 1
+
+    neck_start_row_front = rows_total - neck_rows_front + 1
+    neck_start_row_back  = rows_total - neck_rows_back + 1
+
+    # -----------------------------
+    # 📊 Сводка
+    # -----------------------------
+    st.subheader("📊 Сводка (машинное вязание)")
+    st.write(f"- Набрать петель: **{st_hip}**")
+    st.write(f"- Всего рядов: **{rows_total}**")
+
+    # -----------------------------
+    # 📋 Перед
+    # -----------------------------
+    st.subheader("📋 Инструкция для переда")
+    actions = []
+    delta_bottom = st_chest - st_hip
+    if delta_bottom > 0:
+        actions += sym_increases(delta_bottom, 6, rows_bottom, rows_total, "бок")
+    elif delta_bottom < 0:
+        actions += sym_decreases(-delta_bottom, 6, rows_bottom, rows_total, "бок")
+    actions += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
+    # 👉 здесь потом добавим учёт каретки
+    actions += calc_round_neckline(neck_st, neck_rows_front, neck_start_row_front, rows_total, last_row)
+    actions += slope_shoulder(st_shldr, shoulder_start_row, last_row, rows_total)
+    actions = merge_actions(actions, rows_total)
+    make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, last_row)
+
+    # -----------------------------
+    # 📋 Спинка
+    # -----------------------------
+    st.subheader("📋 Инструкция для спинки")
+    actions_back = []
+    if delta_bottom > 0:
+        actions_back += sym_increases(delta_bottom, 6, rows_bottom, rows_total, "бок")
+    elif delta_bottom < 0:
+        actions_back += sym_decreases(-delta_bottom, 6, rows_bottom, rows_total, "бок")
+    actions_back += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
+    actions_back += calc_round_neckline(neck_st, neck_rows_back, neck_start_row_back, rows_total, last_row, straight_percent=0.02)
+    actions_back += slope_shoulder(st_shldr, shoulder_start_row, last_row, rows_total)
+    actions_back = merge_actions(actions_back, rows_total)
+    make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row, last_row)
    
     # -----------------------------
     # сохраняем результаты для PDF
