@@ -241,6 +241,59 @@ def slope_shoulders(total_stitches, start_row, end_row, rows_total):
 
     return left_actions, right_actions
 
+def plan_neck_and_shoulder(neck_st, neck_rows, neck_start_row, st_shldr, rows_slope, rows_total, straight_percent=0.1):
+    """
+    Комбинированный расчёт горловины + скос плеча:
+    - первый шаг горловины = 60% (чётное число),
+    - дальше равномерные убавки горловины,
+    - последние straight_percent глубины = прямые ряды (горловина без убавок),
+    - плечо плавно уходит в ноль на rows_slope рядах.
+    """
+
+    actions = []
+    if neck_st <= 0 or st_shldr <= 0:
+        return actions
+
+    # ---------------------------
+    # 1. Первый шаг горловины (60%)
+    # ---------------------------
+    first_dec = int(round(neck_st * 0.6))
+    if first_dec % 2 == 1:
+        first_dec += 1
+    rest = neck_st - first_dec
+    if rest < 0:
+        first_dec -= 2
+        rest = neck_st - first_dec
+
+    actions.append((neck_start_row, f"-{first_dec} п. горловина (середина, разделение на плечи)"))
+
+    # ---------------------------
+    # 2. Убавки горловины
+    # ---------------------------
+    straight_rows = max(2, int(round(neck_rows * straight_percent)))
+    last_neck_row = neck_start_row + neck_rows - straight_rows  # конец убавок горловины
+
+    # доступные ряды для убавок (чётные)
+    rows = list(range(neck_start_row+2, last_neck_row+1, 2))
+    parts = split_total_into_steps(rest, len(rows)) if rows else []
+
+    for r, v in zip(rows, parts):
+        actions.append((r, f"-{v} п. горловина (каждое плечо)"))
+
+    # ---------------------------
+    # 3. Скос плеча
+    # ---------------------------
+    shoulder_start = rows_total - rows_slope + 1
+    rows_shoulder = list(range(shoulder_start, rows_total, 2))  # чётные ряды
+    total_shoulder = st_shldr  # плечо должно уйти в ноль
+
+    parts_shoulder = split_total_into_steps(total_shoulder, len(rows_shoulder))
+
+    for r, v in zip(rows_shoulder, parts_shoulder):
+        actions.append((r, f"-{v} п. скос плеча (каждое плечо)"))
+
+    return actions
+
 # -----------------------------
 # Горловина (круглая)
 # -----------------------------
@@ -617,30 +670,37 @@ if st.button("🔄 Рассчитать"):
     st.write(f"- Набрать петель: **{st_hip}**")
     st.write(f"- Всего рядов: **{rows_total}**")
 
-    # -----------------------------
-    # 📋 Перед
-    # -----------------------------
-    st.subheader("📋 Инструкция для переда")
-    actions = []
-    delta_bottom = st_chest - st_hip
-    if delta_bottom > 0:
-        actions += sym_increases(delta_bottom, 6, rows_bottom, rows_total, "бок")
-    elif delta_bottom < 0:
-        actions += sym_decreases(-delta_bottom, 6, rows_bottom, rows_total, "бок")
+# -----------------------------
+# 📋 Перед
+# -----------------------------
+st.subheader("📋 Инструкция для переда")
+actions = []
 
-    actions += plan_neck_and_shoulder(
+# 1. Низ (разница между шириной низа и грудью)
+delta_bottom = st_chest - st_hip
+if delta_bottom > 0:
+    actions += sym_increases(delta_bottom, 6, rows_bottom, rows_total, "бок")
+elif delta_bottom < 0:
+    actions += sym_decreases(-delta_bottom, 6, rows_bottom, rows_total, "бок")
+
+# 2. Пройма
+actions += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
+
+# 3. Горловина + скос плеча
+actions += plan_neck_and_shoulder(
     neck_st=neck_st,
     neck_rows=neck_rows_front,
     neck_start_row=neck_start_row_front,
-    st_shoulders=st_shoulders,
-    shoulder_start_row=shoulder_start_row,
+    st_shldr=st_shldr,
+    rows_slope=rows_slope,
     rows_total=rows_total,
     straight_percent=0.10
 )
-    actions = merge_actions(actions, rows_total)
-    actions = fix_carriage_side(actions, method)  # ⚡️ учитываем сторону каретки
-    make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, key="table_front")
 
+# 4. Объединение и вывод
+actions = merge_actions(actions, rows_total)
+actions = fix_carriage_side(actions, method)  # ⚡️ учитываем сторону каретки
+make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, key="table_front")
     # ----- СПИНКА -----
     st.subheader("📋 Инструкция для спинки")
     actions_back = []
@@ -661,8 +721,16 @@ if st.button("🔄 Рассчитать"):
     elif delta_armh < 0:
         actions_back += sym_decreases(-delta_armh, armhole_start_row, armhole_end_row, rows_total, "пройма")
 
-    # 3. Горловина (спинка)
-    actions_back += calc_round_neckline(neck_st, neck_rows_back, neck_start_row_back, rows_total)
+   # 3. Горловина + скос плеча (спинка)
+actions_back += plan_neck_and_shoulder(
+    neck_st=neck_st,
+    neck_rows=neck_rows_back,
+    neck_start_row=neck_start_row_back,
+    st_shldr=st_shldr,
+    rows_slope=rows_slope,
+    rows_total=rows_total,
+    straight_percent=0.1
+)
 
     # 4. Скос плеча (отдельно левое + правое)
     actions_left_back, actions_right_back = slope_shoulders(st_shldr, shoulder_start_row, rows_total, rows_total)
