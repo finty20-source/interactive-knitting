@@ -384,7 +384,7 @@ method = st.radio(
 # Кнопка расчёта
 # -----------------------------
 if st.button("🔄 Рассчитать"):
-    # Проверка: все поля должны быть заполнены
+
     inputs = [
         density_st_str, density_row_str,
         hip_cm_str, chest_cm_str, length_cm_str,
@@ -392,16 +392,16 @@ if st.button("🔄 Рассчитать"):
         neck_width_cm_str, neck_depth_cm_str, neck_depth_back_cm_str,
         shoulder_len_cm_str, shoulder_slope_cm_str
     ]
+
     if not all(inputs):
         st.error("⚠️ Заполните все поля перед расчётом")
         st.stop()
 
-    # Парсим данные
     try:
         (density_st, density_row, hip_cm, chest_cm, length_cm,
          armhole_depth_cm, neck_width_cm, neck_depth_cm, neck_depth_back_cm,
          shoulder_len_cm, shoulder_slope_cm) = parse_inputs()
-    except ValueError:
+    except:
         st.error("⚠️ Введите только числа (можно с точкой или запятой)")
         st.stop()
 
@@ -426,11 +426,8 @@ if st.button("🔄 Рассчитать"):
     armhole_start_row   = rows_bottom + 1
     shoulder_start_row  = rows_total - rows_slope + 1
     armhole_end_row     = shoulder_start_row - 1
+    last_action_row     = rows_total - 1  # последний ряд — убавка, не закрытие
 
-    # последний ряд — закрытие; манипуляции до rows_total-1
-    last_action_row = rows_total - 1
-
-    # старт горловин
     neck_start_row_front = rows_total - neck_rows_front + 1
     neck_start_row_back  = rows_total - neck_rows_back + 1
 
@@ -456,8 +453,8 @@ if st.button("🔄 Рассчитать"):
     actions += calc_round_neckline(neck_st, neck_rows_front, neck_start_row_front, rows_total, last_action_row)
     actions += slope_shoulder(st_shldr, shoulder_start_row, last_action_row, rows_total)
     actions = merge_actions(actions, rows_total)
-
-    make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, key="table_front")
+    actions = fix_carriage_side(actions, method)   # ⚡️ применяем выбранный метод
+    make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, last_action_row, key="table_front")
 
     # -----------------------------
     # 📋 Спинка
@@ -473,10 +470,12 @@ if st.button("🔄 Рассчитать"):
     actions_back += calc_round_neckline(neck_st, neck_rows_back, neck_start_row_back, rows_total, last_action_row, straight_percent=0.02)
     actions_back += slope_shoulder(st_shldr, shoulder_start_row, last_action_row, rows_total)
     actions_back = merge_actions(actions_back, rows_total)
+    actions_back = fix_carriage_side(actions_back, method)   # ⚡️ применяем выбранный метод
+    make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row, last_action_row, key="table_back")
 
-    make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row, key="table_back")
-
-    # сохраняем результаты для PDF
+    # -----------------------------
+    # сохраняем для PDF
+    # -----------------------------
     st.session_state.actions = actions
     st.session_state.actions_back = actions_back
     st.session_state.st_hip = st_hip
