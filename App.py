@@ -239,27 +239,35 @@ def merge_actions(actions, rows_total):
 # -----------------------------
 # Учёт стороны каретки
 # -----------------------------
-def fix_carriage_side(actions, method="Стандартные"):
-    """Учет стороны каретки:
-       - Нечётные ряды → каретка справа
-       - Чётные ряды  → каретка слева
-       В зависимости от метода убавки делаем со стороны нити или с противоположной.
+def fix_carriage_side(actions, method="Стандартные (со стороны каретки)"):
+    """Убавки выполняются в зависимости от метода:
+       - Стандартные: убавки выполняются со стороны каретки
+       - Частичное вязание: убавки выполняются с противоположной стороны
     """
     fixed = []
     for r, note in actions:
         note_lower = note.lower()
 
-        # Определяем где должна быть убавка
-        if r % 2 == 1:  # нечётный ряд → каретка справа
-            correct_side = "справа" if method == "Стандартные (со стороны каретки)" else "слева"
-        else:           # чётный ряд → каретка слева
-            correct_side = "слева" if method == "Стандартные (со стороны каретки)" else "справа"
+        if method.startswith("Стандартные"):
+            # Нечетный ряд → каретка справа → убавка справа
+            # Четный ряд → каретка слева → убавка слева
+            if ("справа" in note_lower and r % 2 == 0) or ("слева" in note_lower and r % 2 == 1):
+                new_r = r-1 if r > 1 else r+1
+                fixed.append((new_r, note))
+            else:
+                fixed.append((r, note))
 
-        # Если убавка не совпадает → переносим на ряд выше
-        if correct_side not in note_lower:
-            new_r = r-1 if r > 1 else r+1
-            fixed.append((new_r, note + f" (перенос для {method})"))
+        elif method.startswith("Частичное"):
+            # Нечетный ряд → каретка справа → убавка слева
+            # Четный ряд → каретка слева → убавка справа
+            if ("слева" in note_lower and r % 2 == 0) or ("справа" in note_lower and r % 2 == 1):
+                new_r = r-1 if r > 1 else r+1
+                fixed.append((new_r, note))
+            else:
+                fixed.append((r, note))
+
         else:
+            # если метод не выбран — ничего не меняем
             fixed.append((r, note))
 
     return fixed
