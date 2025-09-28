@@ -465,7 +465,7 @@ if st.button("🔄 Рассчитать"):
     if delta_bottom > 0:
         actions_back += sym_increases(delta_bottom, 6, rows_to_armhole_end, rows_total, "бок")
     elif delta_bottom < 0:
-    actions_back += sym_decreases(-delta_bottom, 6, rows_to_armhole_end, rows_total, "бок")
+        actions_back += sym_decreases(-delta_bottom, 6, rows_to_armhole_end, rows_total, "бок")
 
     # 2. Пройма
     delta_armh = st_shoulders - st_chest
