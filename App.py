@@ -231,6 +231,26 @@ def merge_actions(actions, rows_total):
     return fixed
 
 # -----------------------------
+# Учёт стороны каретки
+# -----------------------------
+def fix_carriage_side(actions):
+    """Убавки выполняются только со стороны каретки:
+       - нечётные ряды: каретка справа → убавки справа
+       - чётные ряды: каретка слева  → убавки слева
+       Если убавка не совпадает со стороной каретки → переносим на ряд выше.
+    """
+    fixed = []
+    for r, note in actions:
+        note_lower = note.lower()
+        if ("справа" in note_lower and r % 2 == 0) or ("слева" in note_lower and r % 2 == 1):
+            # переносим на ряд выше (если возможно)
+            new_r = r-1 if r > 1 else r+1
+            fixed.append((new_r, note))
+        else:
+            fixed.append((r, note))
+    return fixed
+
+# -----------------------------
 # Таблица + сегменты
 # -----------------------------
 def section_tags(row, rows_to_armhole_end, neck_start_row, shoulder_start_row):
@@ -400,10 +420,14 @@ if st.button("🔄 Рассчитать"):
     # плечо
     actions += slope_shoulder(st_shldr, shoulder_start_row, last_row, rows_total)
 
-    # ⚡️ не дать горловине и плечу совпасть в один ряд
+    # ⚡️ не дать горловине и плечу совпасть
     actions = merge_actions(actions, rows_total)
 
-    make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, last_row, key="table_front")
+    # ⚡️ учёт каретки
+    actions = fix_carriage_side(actions)
+
+    make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, last_row)
+
 
     # -----------------------------
     # 📋 Спинка
@@ -431,7 +455,11 @@ if st.button("🔄 Рассчитать"):
     # ⚡️ не дать горловине и плечу совпасть
     actions_back = merge_actions(actions_back, rows_total)
 
-    make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row, last_row, key="table_back")
+    # ⚡️ учёт каретки
+    actions_back = fix_carriage_side(actions_back)
+
+    make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row, last_row)
+   
     # -----------------------------
     # сохраняем результаты для PDF
     # -----------------------------
