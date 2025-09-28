@@ -57,7 +57,11 @@ def sym_increases(total_add, start_row, end_row, rows_total, label):
     parts = split_total_into_steps(per_side, steps)
     idxs  = np.linspace(0, len(rows)-1, num=steps, dtype=int)
     chosen= [rows[i] for i in idxs]
-    return [(r, f"+{v} п. {label} (с каждой стороны)") for r, v in zip(chosen, parts)]
+    out = []
+for r, v in zip(chosen, parts):
+    out.append((r, f"+{v} п. {label} (справа)"))
+    out.append((r, f"+{v} п. {label} (слева)"))
+return out
 
 def sym_decreases(total_sub, start_row, end_row, rows_total, label):
     if total_sub <= 0: return []
@@ -69,8 +73,11 @@ def sym_decreases(total_sub, start_row, end_row, rows_total, label):
     parts = split_total_into_steps(per_side, steps)
     idxs  = np.linspace(0, len(rows)-1, num=steps, dtype=int)
     chosen= [rows[i] for i in idxs]
-    return [(r, f"-{v} п. {label} (с каждой стороны)") for r, v in zip(chosen, parts)]
-
+    out = []
+for r, v in zip(chosen, parts):
+    out.append((r, f"-{v} п. {label} (справа)"))
+    out.append((r, f"-{v} п. {label} (слева)"))
+return out
 
 # -----------------------------
 # Скос плеча (заканчивается до ряда закрытия)
@@ -89,7 +96,8 @@ def slope_shoulder(total_stitches, start_row, end_row, rows_total):
     actions = []
     for i, r in enumerate(rows):
         dec = base + (1 if i < rem else 0)
-        actions.append((r, f"-{dec} п. скос плеча (одно плечо)"))
+        actions.append((r, f"-{dec} п. скос плеча (справа)"))
+actions.append((r, f"-{dec} п. скос плеча (слева)"))
     return actions
 
 # -----------------------------
@@ -117,7 +125,8 @@ def calc_round_neckline(total_stitches, total_rows, start_row, rows_total, last_
         return []
 
     actions = []
-    actions.append((rows[0], f"-{first_dec} п. горловина (середина, разделение на плечи)"))
+    actions.append((r, f"-{v} п. горловина (справа)"))
+actions.append((r, f"-{v} п. горловина (слева)"))
 
     if rest <= 0 or len(rows) == 1:
         return actions
@@ -331,44 +340,9 @@ shoulder_len_cm_str    = st.text_input("Длина плеча (см)", placehold
 shoulder_slope_cm_str  = st.text_input("Скос плеча (см)", placeholder="введите высоту")
 
 # -----------------------------
-# Кнопки расчёта
+# Кнопка расчёта
 # -----------------------------
-col1, col2 = st.columns(2)
-with col1:
-    manual_btn = st.button("🔄 Рассчитать (ручное вязание)")
-with col2:
-    machine_btn = st.button("🔄 Рассчитать (машинное вязание)")
-
-# -----------------------------
-# Проверка заполненности
-# -----------------------------
-inputs = [
-    density_st_str, density_row_str,
-    hip_cm_str, chest_cm_str, length_cm_str,
-    armhole_depth_cm_str,
-    neck_width_cm_str, neck_depth_cm_str, neck_depth_back_cm_str,
-    shoulder_len_cm_str, shoulder_slope_cm_str
-]
-
-def parse_inputs():
-    return (
-        float(density_st_str.replace(",", ".")),
-        float(density_row_str.replace(",", ".")),
-        float(hip_cm_str.replace(",", ".")),
-        float(chest_cm_str.replace(",", ".")),
-        float(length_cm_str.replace(",", ".")),
-        float(armhole_depth_cm_str.replace(",", ".")),
-        float(neck_width_cm_str.replace(",", ".")),
-        float(neck_depth_cm_str.replace(",", ".")),
-        float(neck_depth_back_cm_str.replace(",", ".")),
-        float(shoulder_len_cm_str.replace(",", ".")),
-        float(shoulder_slope_cm_str.replace(",", "."))
-    )
-
-# -----------------------------
-# Ветка: ручное вязание
-# -----------------------------
-if manual_btn:
+if st.button("🔄 Рассчитать"):
     if not all(inputs):
         st.error("⚠️ Заполните все поля перед расчётом")
         st.stop()
@@ -381,7 +355,9 @@ if manual_btn:
         st.error("⚠️ Введите только числа (можно с точкой или запятой)")
         st.stop()
 
-    # пересчёт в петли/ряды
+    # -----------------------------
+    # Пересчёт в петли/ряды
+    # -----------------------------
     st_hip     = cm_to_st(hip_cm, density_st)
     st_chest   = cm_to_st(chest_cm, density_st)
     rows_total = cm_to_rows(length_cm, density_row)
@@ -404,16 +380,20 @@ if manual_btn:
     # последний ряд — закрытие; манипуляции до rows_total-1
     last_action_row = rows_total - 1
 
-    # старт горловин (от общей высоты), но сама горловина урежется по last_action_row
+    # старт горловин
     neck_start_row_front = rows_total - neck_rows_front + 1
     neck_start_row_back  = rows_total - neck_rows_back + 1
 
+    # -----------------------------
     # 📊 Сводка
-    st.subheader("📊 Сводка (ручное вязание)")
+    # -----------------------------
+    st.subheader("📊 Сводка")
     st.write(f"- Набрать петель: **{st_hip}**")
     st.write(f"- Всего рядов: **{rows_total}**")
 
+    # -----------------------------
     # 📋 Перед
+    # -----------------------------
     st.subheader("📋 Инструкция для переда")
     actions = []
     delta_bottom = st_chest - st_hip
@@ -423,13 +403,15 @@ if manual_btn:
         actions += sym_decreases(-delta_bottom, 6, rows_bottom, rows_total, "бок")
 
     actions += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
-    actions += calc_round_neckline(neck_st, neck_rows_front, neck_start_row_front, rows_total, last_action_row, straight_percent=0.20)
+    actions += calc_round_neckline(neck_st, neck_rows_front, neck_start_row_front, rows_total, last_action_row)
     actions += slope_shoulder(st_shldr, shoulder_start_row, last_action_row, rows_total)
     actions = merge_actions(actions, rows_total)
 
     make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, key="table_front")
 
+    # -----------------------------
     # 📋 Спинка
+    # -----------------------------
     st.subheader("📋 Инструкция для спинки")
     actions_back = []
     if delta_bottom > 0:
@@ -444,7 +426,7 @@ if manual_btn:
 
     make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row, key="table_back")
 
-    # сохранить для PDF
+    # сохраняем результаты для PDF
     st.session_state.actions = actions
     st.session_state.actions_back = actions_back
     st.session_state.st_hip = st_hip
