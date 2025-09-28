@@ -200,10 +200,10 @@ def calc_round_armhole(st_chest, st_shoulders, start_row, shoulder_start_row, ro
 # Слияние действий (горловина + плечо)
 # -----------------------------
 def merge_actions(actions, rows_total):
-    """Правила:
-       - убавки горловины и плеча не могут быть в одном ряду
-       - горловина остаётся на месте (чётные ряды)
-       - скос плеча переносим на ряд выше (даже если он нечётный)"""
+    """Правило:
+       - убавки горловины и скоса плеча не могут быть в одном ряду.
+       - горловина остаётся в своём ряду.
+       - скос плеча переносим на +1 ряд (если занято — ищем дальше)."""
     merged = defaultdict(list)
     for row, note in actions:
         merged[row].append(note)
@@ -215,13 +215,16 @@ def merge_actions(actions, rows_total):
         notes = merged[row]
 
         if ("горловина" in " ".join(notes)) and ("скос плеча" in " ".join(notes)):
+            # разделяем
             shoulder_notes = [n for n in notes if "скос плеча" in n]
             neck_notes     = [n for n in notes if "горловина" in n]
 
+            # горловина остаётся в своём ряду
             fixed.append((row, "; ".join(neck_notes)))
             used_rows.add(row)
 
-            new_row = row - 1 if row > 1 else row + 1
+            # плечо переносим на следующий свободный ряд
+            new_row = row + 1
             while new_row in used_rows and new_row < rows_total:
                 new_row += 1
 
@@ -233,7 +236,7 @@ def merge_actions(actions, rows_total):
             fixed.append((row, "; ".join(notes)))
             used_rows.add(row)
 
-    return fixed
+    return sorted(fixed, key=lambda x: int(str(x[0]).split('-')[0]))
 
 # -----------------------------
 # Учёт стороны каретки
