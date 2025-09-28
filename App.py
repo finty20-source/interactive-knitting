@@ -79,6 +79,124 @@ def sym_decreases(total_sub, start_row, end_row, rows_total, label):
         out.append((r, f"-{v} п. {label} (слева)"))
     return out
 
+def slope_shoulders_required(need, start_row, end_row, rows_total):
+    """
+    Если need — число: применим одинаково к двум плечам.
+    Если need — кортеж (left, right): считаем отдельно левое и правое.
+    Ряды: чётные. Если у правого не хватает чётных, сдвигаем +1.
+    """
+    if isinstance(need, tuple):
+        need_left, need_right = need
+    else:
+        need_left = need_right = int(need)
+
+    actions = []
+
+    # доступные чётные ряды
+    rows_even = allowed_even_rows(start_row, end_row, rows_total)
+    if not rows_even:
+        return actions
+
+    # распределим по рядам по 1 петле (если надо больше — растянется равномерно)
+    def spread(total, rows):
+        if total <= 0 or not rows:
+            return []
+        steps = min(len(rows), total)
+        idxs  = np.linspace(0, len(rows)-1, num=steps, dtype=int)
+        chosen = [rows[i] for i in idxs]
+        return [(r, 1) for r in chosen]
+
+    # левое плечо — чётные ряды
+    left_plan = spread(need_left, rows_even)
+    for r, v in left_plan:
+        actions.append((r, f"-{v} п. скос плеча (левое плечо)"))
+
+    # правое плечо — чётные +1 ряд
+    right_rows = []
+    for r in rows_even:
+        if r + 1 <= rows_total - 2:
+            right_rows.append(r + 1)
+    right_plan = spread(need_right, right_rows)
+    for r, v in right_plan:
+        actions.append((r, f"-{v} п. скос плеча (правое плечо)"))
+
+    return actions
+
+
+def plan_neck_and_shoulder(
+    neck_st: int,
+    neck_rows: int,
+    neck_start_row: int,
+    st_shoulders: int,          # ширина по плечам (петли)
+    shoulder_start_row: int,
+    rows_total: int,
+    straight_percent: float = 0.10
+):
+    """
+    Считает горловину и скос плеча как ЕДИНЫЙ процесс:
+    - 60% центральное закрытие (чётное число),
+    - остаток горловины распределяется по рядам (частичное вязание),
+    - последние straight_percent глубины горловины — прямо,
+    - плечо добирает остаток петель до нуля.
+    """
+    actions = []
+    if neck_st <= 0 or neck_rows <= 0:
+        return actions
+
+    # 1. Центральное закрытие
+    first_dec = int(round(neck_st * 0.60))
+    if first_dec % 2 == 1:
+        first_dec += 1
+    if first_dec > neck_st:
+        first_dec = neck_st if neck_st % 2 == 0 else neck_st - 1
+    rest = neck_st - first_dec
+
+    # сколько останется петель после центра
+    remaining_total = max(0, st_shoulders - first_dec)
+    per_shoulder = remaining_total // 2
+
+    central_row = max(6, neck_start_row)
+    actions.append((central_row,
+        f"-{first_dec} п. горловина (центр, разделение на плечи); "
+        f"остаток на плечо: {per_shoulder} п."
+    ))
+
+    # 2. Горловина: остаток распределяем
+    straight_rows = max(2, int(round(neck_rows * straight_percent)))
+    neck_end_by_depth = neck_start_row + neck_rows - 1 - straight_rows
+    effective_end = min(neck_end_by_depth, rows_total - 2)
+    rows = allowed_all_rows(neck_start_row, effective_end, rows_total)
+
+    if rest > 0 and len(rows) > 1:
+        rest_rows = rows[1:]
+        steps = min(len(rest_rows), rest)
+        idxs = np.linspace(0, len(rest_rows)-1, num=steps, dtype=int)
+        chosen = [rest_rows[i] for i in idxs]
+        for i, r in enumerate(chosen):
+            if i % 2 == 0:
+                actions.append((r, f"-1 п. горловина (левое плечо)"))
+            else:
+                actions.append((r, f"-1 п. горловина (правое плечо)"))
+
+        # пересчитаем сколько плечо должно добрать
+        left_used = (steps + 1) // 2
+        right_used = steps // 2
+        need_left = max(0, per_shoulder - left_used)
+        need_right = max(0, per_shoulder - right_used)
+    else:
+        need_left = per_shoulder
+        need_right = per_shoulder
+
+    # 3. Скос плеча добирает остаток
+    actions += slope_shoulders_required(
+        (need_left, need_right),
+        shoulder_start_row,
+        rows_total,
+        rows_total
+    )
+
+    return actions
+
 # -----------------------------
 # Скос плеча (заканчивается до последнего ряда)
 # -----------------------------
@@ -495,16 +613,15 @@ if st.button("🔄 Рассчитать"):
     elif delta_bottom < 0:
         actions += sym_decreases(-delta_bottom, 6, rows_bottom, rows_total, "бок")
 
-    actions += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
-    actions += calc_round_neckline(
-    neck_st,
-    neck_rows_front,
-    neck_start_row_front,
-    rows_total,
-    last_action_row
+    actions += plan_neck_and_shoulder(
+    neck_st=neck_st,
+    neck_rows=neck_rows_front,
+    neck_start_row=neck_start_row_front,
+    st_shoulders=st_shoulders,
+    shoulder_start_row=shoulder_start_row,
+    rows_total=rows_total,
+    straight_percent=0.10
 )
-    actions_left, actions_right = slope_shoulders(st_shldr, shoulder_start_row, rows_total, rows_total)
-    actions += actions_left + actions_right
     actions = merge_actions(actions, rows_total)
     actions = fix_carriage_side(actions, method)  # ⚡️ учитываем сторону каретки
     make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, key="table_front")
@@ -540,12 +657,14 @@ if st.button("🔄 Рассчитать"):
     actions_back = merge_actions(actions_back, rows_total)
     actions_back = fix_carriage_side(actions_back, method)  # ⚡️ если используешь сторону каретки
     make_table_full(actions_back, rows_total, rows_to_armhole_end, neck_start_row_back, shoulder_start_row, key="table_back")
-    actions_back += calc_round_neckline(
-    neck_st,
-    neck_rows_back,
-    neck_start_row_back,
-    rows_total,
-    last_action_row
+    actions_back += plan_neck_and_shoulder(
+    neck_st=neck_st,
+    neck_rows=neck_rows_back,
+    neck_start_row=neck_start_row_back,
+    st_shoulders=st_shoulders,
+    shoulder_start_row=shoulder_start_row,
+    rows_total=rows_total,
+    straight_percent=0.10
 )
     # -----------------------------
     # сохраняем для PDF
