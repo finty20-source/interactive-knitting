@@ -76,21 +76,28 @@ def sym_decreases(total_sub, start_row, end_row, rows_total, label):
 # Скос плеча
 # -----------------------------
 def slope_shoulder(total_stitches, start_row, end_row, rows_total):
+    """Скос плеча: убавки распределяются по всем рядам.
+       В чётных рядах – одно плечо, в нечётных – второе."""
     if total_stitches <= 0:
         return []
-    # ⚡️ теперь доходит до самого конца
-    rows = allowed_even_rows(start_row, end_row, rows_total, force_last=True)
-    if not rows:
-        return []
+
+    rows = list(range(start_row, end_row + 1))  # теперь все ряды подряд
     steps = len(rows)
+    if steps <= 0:
+        return []
+
     base = total_stitches // steps
     rem  = total_stitches % steps
+
     actions = []
     for i, r in enumerate(rows):
         dec = base + (1 if i < rem else 0)
-        actions.append((r, f"-{dec} п. скос плеча (одно плечо)"))
-    return actions
+        if r % 2 == 0:
+            actions.append((r, f"-{dec} п. скос плеча (левое плечо)"))
+        else:
+            actions.append((r, f"-{dec} п. скос плеча (правое плечо)"))
 
+    return actions
 
 # -----------------------------
 # Горловина (круглая)
