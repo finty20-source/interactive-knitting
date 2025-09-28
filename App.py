@@ -328,7 +328,11 @@ shoulder_slope_cm_str  = st.text_input("Скос плеча (см)", placeholder
 # -----------------------------
 # Кнопка расчёта
 # -----------------------------
-if st.button("🔄 Рассчитать"):
+col1, col2 = st.columns(2)
+with col1:
+    manual_btn = st.button("🔄 Рассчитать (ручное вязание)")
+with col2:
+    machine_btn = st.button("🔄 Рассчитать (машинное вязание)")
     # -----------------------------
     # Проверка заполненности всех полей
     # -----------------------------
@@ -405,60 +409,6 @@ if st.button("🔄 Рассчитать"):
     st.subheader("📋 Инструкция для переда")
     actions = []
 
-    delta_bottom = st_chest - st_hip
-    if delta_bottom > 0:
-        actions += sym_increases(delta_bottom, 6, rows_bottom, rows_total, "бок")
-    elif delta_bottom < 0:
-        actions += sym_decreases(-delta_bottom, 6, rows_bottom, rows_total, "бок")
-
-    # пройма
-    actions += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
-
-    # горловина (20% прямых рядов по умолчанию)
-    actions += calc_round_neckline(neck_st, neck_rows_front, neck_start_row_front, rows_total, last_row)
-
-    # плечо
-    actions += slope_shoulder(st_shldr, shoulder_start_row, last_row, rows_total)
-
-    # ⚡️ не дать горловине и плечу совпасть
-    actions = merge_actions(actions, rows_total)
-
-    # ⚡️ учёт каретки
-    actions = fix_carriage_side(actions)
-
-    make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, last_row, key="table_front")
-
-
-    # -----------------------------
-    # 📋 Спинка
-    # -----------------------------
-    st.subheader("📋 Инструкция для спинки")
-    actions_back = []
-
-    delta_bottom = st_chest - st_hip
-    if delta_bottom > 0:
-        actions_back += sym_increases(delta_bottom, 6, rows_bottom, rows_total, "бок")
-    elif delta_bottom < 0:
-        actions_back += sym_decreases(-delta_bottom, 6, rows_bottom, rows_total, "бок")
-
-    # пройма
-    actions_back += calc_round_armhole(st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total)
-
-    # горловина спинки: прямые ряды = 2%
-    actions_back += calc_round_neckline(
-        neck_st, neck_rows_back, neck_start_row_back, rows_total, last_row, straight_percent=0.02
-    )
-
-    # плечо
-    actions_back += slope_shoulder(st_shldr, shoulder_start_row, last_row, rows_total)
-
-    # ⚡️ не дать горловине и плечу совпасть
-    actions_back = merge_actions(actions_back, rows_total)
-
-    # ⚡️ учёт каретки
-    actions_back = fix_carriage_side(actions_back)
-
-    make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row, last_row, key="table_back")
    
     # -----------------------------
     # сохраняем результаты для PDF
