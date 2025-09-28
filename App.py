@@ -271,28 +271,10 @@ def fix_carriage_side(actions, method=None):
 # -----------------------------
 # Таблица + сегменты
 # -----------------------------
-def section_tags(row, rows_to_armhole_end, neck_start_row, shoulder_start_row):
-    tags = []
-    if row <= rows_to_armhole_end:
-        tags.append("Низ изделия")
-    if rows_to_armhole_end < row < shoulder_start_row:
-        tags.append("Пройма")
-    if neck_start_row and row >= neck_start_row:
-        tags.append("Горловина")
-    if shoulder_start_row and row >= shoulder_start_row:
-        tags.append("Скос плеча")
-    return " + ".join(tags) if tags else "—"
-
-# применяем корректировку по методу убавок
-actions = fix_carriage_side(actions, method)
-actions_back = fix_carriage_side(actions_back, method)
-
-
-def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, shoulder_start_row, key=None):
-    # сгруппировать действия по рядам
+def make_table_full(actions, rows_count, rows_to_armhole_end, neck_start_row, shoulder_start_row, key=None):
     merged = defaultdict(list)
     for row, note in actions:
-        if 1 <= row <= rows_total:  
+        if 1 <= row <= rows_count:
             merged[row].append(note)
 
     rows_sorted = sorted(merged.keys())
@@ -301,7 +283,7 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
 
     if not rows_sorted:
         seg = section_tags(1, rows_to_armhole_end, neck_start_row, shoulder_start_row)
-        table_rows.append((f"1-{rows_total}", "Прямо", seg))
+        table_rows.append((f"1-{rows_count}", "Прямо", seg))
     else:
         for r in rows_sorted:
             if r > prev:
@@ -314,7 +296,6 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
                                section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
             prev = r + 1
 
-        # добиваем прямые ряды до последнего действия (если есть пустота)
         last_action_row = max(rows_sorted)
         if prev <= last_action_row:
             seg = section_tags(prev, rows_to_armhole_end, neck_start_row, shoulder_start_row)
@@ -323,12 +304,21 @@ def make_table_full(actions, rows_total, rows_to_armhole_end, neck_start_row, sh
             else:
                 table_rows.append((f"{prev}-{last_action_row}", "Прямо", seg))
 
-    # 👉 финальный ряд = последняя убавка (никакого "закрытия")
     df = pd.DataFrame(table_rows, columns=["Ряды", "Действия", "Сегмент"])
     st.dataframe(df, use_container_width=True, hide_index=True)
 
     if key:
         st.session_state[key] = table_rows
+
+
+# -----------------------------
+# 👉 Применяем сторону каретки уже после расчётов
+# -----------------------------
+actions = fix_carriage_side(actions, method)
+actions_back = fix_carriage_side(actions_back, method)
+
+make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, key="table_front")
+make_table_full(actions_back, rows_total, rows_bottom, neck_start_row_back, shoulder_start_row, key="table_back")
 
 def parse_inputs():
     return (
