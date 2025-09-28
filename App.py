@@ -425,6 +425,7 @@ if st.button("🔄 Рассчитать"):
     armhole_start_row   = rows_bottom + 1
     shoulder_start_row  = rows_total - rows_slope + 1
     armhole_end_row     = shoulder_start_row - 1
+    rows_to_armhole_end = rows_bottom
     last_action_row     = rows_total - 1  # последний ряд = убавка, не закрытие
 
     neck_start_row_front = rows_total - neck_rows_front + 1
