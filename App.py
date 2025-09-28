@@ -268,6 +268,22 @@ def fix_carriage_side(actions, method=None):
             fixed.append((r, note))
 
     return fixed
+
+# -----------------------------
+# Сегменты по рядам
+# -----------------------------
+def section_tags(row, rows_to_armhole_end, neck_start_row, shoulder_start_row):
+    tags = []
+    if row <= rows_to_armhole_end:
+        tags.append("Низ изделия")
+    if rows_to_armhole_end < row < shoulder_start_row:
+        tags.append("Пройма")
+    if neck_start_row and row >= neck_start_row:
+        tags.append("Горловина")
+    if shoulder_start_row and row >= shoulder_start_row:
+        tags.append("Скос плеча")
+    return " + ".join(tags) if tags else "—"
+    
 # -----------------------------
 # Таблица + сегменты
 # -----------------------------
