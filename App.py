@@ -524,19 +524,20 @@ def right_notes(notes, row=None, include_split=False):
 # -----------------------------
 # Таблица спинки с разделением на плечи
 # -----------------------------
-def make_table_back_split(actions, rows_count, rows_to_armhole_end, neck_start_row, shoulder_start_row, key=None):
-    """
-    Делит инструкцию спинки на:
-    1) До разделения (включая ряд с центральным закрытием горловины),
-    2) ЛЕВОЕ ПЛЕЧО,
-    3) ПРАВОЕ ПЛЕЧО (начиная с того же split_row).
-    """
+    # В ряду разделения: только горловина
+    split_neck = [n for n in merged[split_row] if "горловина" in n.lower()]
+    split_shoulders = [n for n in merged[split_row] if "скос плеча" in n.lower()]
 
-    # Собираем ряды -> список действий
-    merged = defaultdict(list)
-    for row, note in actions:
-        if isinstance(row, int) and 1 <= row <= rows_count:
-            merged[row].append(note)
+    if split_neck:
+        table_rows.append((str(split_row), "; ".join(split_neck), section_tags(split_row)))
+
+    # Скосы плечей из split_row переносим на следующий ряд
+    if split_shoulders:
+        for n in split_shoulders:
+            if "левое" in n.lower():
+                merged[split_row + 1].append(n)
+            elif "правое" in n.lower():
+                merged[split_row + 1].append(n)
 
     if not merged:
         make_table_full(actions, rows_count, rows_to_armhole_end, neck_start_row, shoulder_start_row, key=key)
