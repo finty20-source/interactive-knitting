@@ -82,29 +82,41 @@ def sym_decreases(total_sub, start_row, end_row, rows_total, label):
     return out
 
 # -----------------------------
-# Скос плеча
+# Пройма (круглая)
 # -----------------------------
-def slope_shoulders(total_stitches, start_row, end_row, rows_total):
-    """Левое плечо — чётные ряды, правое — со смещением на +1"""
-    if total_stitches <= 0:
-        return [], []
+def calc_round_armhole(st_chest, st_shoulders, start_row, shoulder_start_row, rows_total, depth_percent=0.05, hold_percent=0.1):
+    """Скруглённая пройма: убавки внутрь, потом прямо, потом плавный выход к плечам.
+       Пройма всегда заканчивается до начала плеча."""
+    if shoulder_start_row <= start_row:
+        return []
 
-    rows = allowed_even_rows(start_row, end_row, rows_total)
-    if not rows:
-        return [], []
+    end_row = shoulder_start_row - 1
+    total_rows = end_row - start_row + 1
+    if total_rows <= 0:
+        return []
 
-    steps = len(rows)
-    base = total_stitches // steps
-    rem  = total_stitches % steps
+    depth_armhole_st = int(round(st_chest * depth_percent))
+    st_mid = st_chest - depth_armhole_st
 
-    left_actions, right_actions = [], []
-    for i, r in enumerate(rows):
-        dec = base + (1 if i < rem else 0)
-        left_actions.append((r, f"-{dec} п. скос плеча (левое плечо)"))
-        if r+1 <= rows_total:
-            right_actions.append((r+1, f"-{dec} п. скос плеча (правое плечо)"))
-    return left_actions, right_actions
+    rows_smooth = int(total_rows * 0.4)       # нижняя часть
+    rows_hold   = int(total_rows * hold_percent)  # прямо
+    rows_rest   = total_rows - rows_smooth - rows_hold
 
+    actions = []
+
+    # Этап 1: убавки внутрь (chest → mid)
+    delta1 = st_mid - st_chest
+    if delta1 < 0:
+        actions += sym_decreases(-delta1, start_row, start_row+rows_smooth, rows_total, "пройма")
+
+    # Этап 2: прямо (st_mid)
+
+    # Этап 3: прибавки наружу (mid → плечи)
+    delta2 = st_shoulders - st_mid
+    if delta2 > 0:
+        actions += sym_increases(delta2, start_row+rows_smooth+rows_hold, end_row, rows_total, "пройма")
+
+    return actions
 
 # -----------------------------
 # Горловина (круглая, с прямыми рядами сверху)
@@ -145,41 +157,28 @@ def calc_round_neckline(total_stitches, total_rows, start_row, rows_total, strai
     return actions
 
 # -----------------------------
-# Пройма (круглая)
+# Скос плеча
 # -----------------------------
-def calc_round_armhole(st_chest, st_shoulders, start_row, shoulder_start_row, rows_total, depth_percent=0.05, hold_percent=0.1):
-    """Скруглённая пройма: убавки внутрь, потом прямо, потом плавный выход к плечам.
-       Пройма всегда заканчивается до начала плеча."""
-    if shoulder_start_row <= start_row:
-        return []
+def slope_shoulders(total_stitches, start_row, end_row, rows_total):
+    """Левое плечо — чётные ряды, правое — со смещением на +1"""
+    if total_stitches <= 0:
+        return [], []
 
-    end_row = shoulder_start_row - 1
-    total_rows = end_row - start_row + 1
-    if total_rows <= 0:
-        return []
+    rows = allowed_even_rows(start_row, end_row, rows_total)
+    if not rows:
+        return [], []
 
-    depth_armhole_st = int(round(st_chest * depth_percent))
-    st_mid = st_chest - depth_armhole_st
+    steps = len(rows)
+    base = total_stitches // steps
+    rem  = total_stitches % steps
 
-    rows_smooth = int(total_rows * 0.4)       # нижняя часть
-    rows_hold   = int(total_rows * hold_percent)  # прямо
-    rows_rest   = total_rows - rows_smooth - rows_hold
-
-    actions = []
-
-    # Этап 1: убавки внутрь (chest → mid)
-    delta1 = st_mid - st_chest
-    if delta1 < 0:
-        actions += sym_decreases(-delta1, start_row, start_row+rows_smooth, rows_total, "пройма")
-
-    # Этап 2: прямо (st_mid)
-
-    # Этап 3: прибавки наружу (mid → плечи)
-    delta2 = st_shoulders - st_mid
-    if delta2 > 0:
-        actions += sym_increases(delta2, start_row+rows_smooth+rows_hold, end_row, rows_total, "пройма")
-
-    return actions
+    left_actions, right_actions = [], []
+    for i, r in enumerate(rows):
+        dec = base + (1 if i < rem else 0)
+        left_actions.append((r, f"-{dec} п. скос плеча (левое плечо)"))
+        if r+1 <= rows_total:
+            right_actions.append((r+1, f"-{dec} п. скос плеча (правое плечо)"))
+    return left_actions, right_actions
 
 # -----------------------------
 # Горловина + скос плеча (с разделением на левое/правое плечо)
