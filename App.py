@@ -750,6 +750,10 @@ if st.button("🔄 Рассчитать"):
     elif delta_bottom < 0:
         actions_back += sym_decreases(-delta_bottom, 6, rows_bottom, rows_total, "бок")
 
+        st_hip = cm_to_st(hip_cm, density_st)
+    if st_hip % 2:  # всегда чётный набор
+        st_hip += 1
+
     # 2. Пройма
     delta_armh = st_shoulders - st_chest
     if delta_armh > 0:
@@ -759,13 +763,14 @@ if st.button("🔄 Рассчитать"):
 
     # 3. Горловина + плечи (вместе)
     actions_back += plan_neck_and_shoulders_split(
-        neck_st=neck_st,
-        neck_rows=neck_rows_back,
-        neck_start_row=neck_start_row_back,
-        st_shoulders=2 * st_shldr,   # <-- вот так
-        shoulder_start_row=shoulder_start_row,
-        rows_total=rows_total
-   )
+    neck_st=neck_st,
+    neck_rows=neck_rows_back,
+    neck_start_row=neck_start_row_back,
+    st_shoulders=st_shoulders,
+    shoulder_start_row=shoulder_start_row,
+    rows_total=rows_total,
+    straight_percent=0.20
+)
 
     # 4. Слияние и коррекция
     actions_back = merge_actions(actions_back, rows_total)
