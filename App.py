@@ -84,27 +84,27 @@ def sym_decreases(total_sub, start_row, end_row, rows_total, label):
 # -----------------------------
 def slope_shoulders(total_stitches, start_row, end_row, rows_total):
     """
-    Левое плечо — чётные ряды.
-    Правое плечо — со смещением на +1.
+    Скос плеча: ступенчатое распределение убавок от большего к меньшему.
+    Пример: -5, -5, -4, -4, -3 (в зависимости от total_stitches).
+    Левое плечо — чётные ряды, правое — смещение на +1 ряд.
     """
     if total_stitches <= 0:
         return [], []
 
     rows = allowed_even_rows(start_row, end_row, rows_total)
-    if not rows:
+    steps = len(rows)
+    if steps == 0:
         return [], []
 
-    steps = len(rows)
-    base = total_stitches // steps
-    rem  = total_stitches % steps
+    # делим петли в пропорции: сначала крупные, потом мелкие
+    parts = split_total_into_steps(total_stitches, steps)
+    parts.sort(reverse=True)  # чтобы сверху были крупные значения
 
     left_actions, right_actions = [], []
-
-    for i, r in enumerate(rows):
-        dec = base + (1 if i < rem else 0)
+    for r, dec in zip(rows, parts):
         left_actions.append((r, f"-{dec} п. скос плеча (левое плечо)"))
-        if r+1 <= rows_total:
-            right_actions.append((r+1, f"-{dec} п. скос плеча (правое плечо)"))
+        if r + 1 <= rows_total:
+            right_actions.append((r + 1, f"-{dec} п. скос плеча (правое плечо)"))
 
     return left_actions, right_actions
 
