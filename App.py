@@ -370,6 +370,141 @@ def parse_inputs():
     )
 
 # -----------------------------
+# Таблица переда с разделением на плечи
+# -----------------------------
+def make_table_front_split(actions, rows_count, rows_to_armhole_end, neck_start_row, shoulder_start_row, key=None):
+    """
+    Делит инструкцию переда на:
+    1) До ряда разделения на плечи,
+    2) ЛЕВОЕ ПЛЕЧО,
+    3) ПРАВОЕ ПЛЕЧО (с возвратом к ряду разделения).
+    Если разделение не найдено — тихо падаем обратно на обычную make_table_full.
+    """
+    # Собираем ряды -> список действий
+    merged = defaultdict(list)
+    for row, note in actions:
+        if isinstance(row, int) and 1 <= row <= rows_count:
+            merged[row].append(note)
+
+    if not merged:
+        # Нечего отрисовывать
+        make_table_full(actions, rows_count, rows_to_armhole_end, neck_start_row, shoulder_start_row, key=key)
+        return
+
+    rows_sorted = sorted(merged.keys())
+
+    # Ищем ряд разделения (центральное закрытие горловины)
+    split_row = None
+    for r in rows_sorted:
+        joined = " ; ".join(merged[r]).lower()
+        if "разделение на плечи" in joined:
+            split_row = r
+            break
+
+    if split_row is None:
+        # Нет разделения — используем обычный рендер
+        make_table_full(actions, rows_count, rows_to_armhole_end, neck_start_row, shoulder_start_row, key=key)
+        return
+
+    def section_tags(row):
+        tags = []
+        if row <= rows_to_armhole_end:
+            tags.append("Низ изделия")
+        if rows_to_armhole_end < row < shoulder_start_row:
+            tags.append("Пройма")
+        if neck_start_row and row >= neck_start_row:
+            tags.append("Горловина")
+        if shoulder_start_row and row >= shoulder_start_row:
+            tags.append("Скос плеча")
+        return " + ".join(tags) if tags else "—"
+
+    def push_plain_range(table_rows, a, b):
+        if a > b:
+            return
+        if a == b:
+            table_rows.append((str(a), "Прямо", section_tags(a)))
+        else:
+            table_rows.append((f"{a}-{b}", "Прямо", section_tags(a)))
+
+    # ---------- 1) ДО РАЗДЕЛЕНИЯ ----------
+    table_rows = []
+    prev = 1
+    for r in [x for x in rows_sorted if x < split_row]:
+        if r > prev:
+            push_plain_range(table_rows, prev, r - 1)
+        table_rows.append((str(r), "; ".join(merged[r]), section_tags(r)))
+        prev = r + 1
+    if prev <= split_row - 1:
+        push_plain_range(table_rows, prev, split_row - 1)
+
+    # Ряд разделения показываем всегда
+    table_rows.append((str(split_row), "; ".join(merged[split_row]), section_tags(split_row)))
+
+    # Вспомогательные фильтры
+    def left_notes(notes):
+        out = []
+        for n in notes:
+            ln = n.lower()
+            if "левое плечо" in ln or "каждое плечо" in ln:
+                out.append(n)
+        return out
+
+    def right_notes(notes, include_split=False):
+        out = []
+        for n in notes:
+            ln = n.lower()
+            if "правое плечо" in ln or "каждое плечо" in ln:
+                out.append(n)
+            # В правом блоке в первом ряду дублируем центральное закрытие для наглядности
+            if include_split and "разделение на плечи" in ln and n not in out:
+                out.append(n)
+        return out
+
+    # ---------- 2) ЛЕВОЕ ПЛЕЧО ----------
+    table_rows.append(("— ЛЕВОЕ ПЛЕЧО —", "", ""))
+
+    left_rows = []
+    for r in [x for x in rows_sorted if x > split_row]:
+        filt = left_notes(merged[r])
+        if filt:
+            left_rows.append((r, filt))
+
+    prev = split_row + 1
+    for r, notes in left_rows:
+        if r > prev:
+            push_plain_range(table_rows, prev, r - 1)
+        table_rows.append((str(r), "; ".join(notes), section_tags(r)))
+        prev = r + 1
+    if prev <= rows_count:
+        push_plain_range(table_rows, prev, rows_count)
+
+    # ---------- 3) ПРАВОЕ ПЛЕЧО ----------
+    table_rows.append((f"— ПРАВОЕ ПЛЕЧО — (вернитесь к ряду {split_row})", "", ""))
+
+    right_rows = []
+    # включаем split_row, чтобы показать центральное закрытие и возможный скос, если он совпал
+    candidate_rows = [split_row] + [x for x in rows_sorted if x > split_row]
+    for r in candidate_rows:
+        filt = right_notes(merged[r], include_split=(r == split_row))
+        if filt:
+            right_rows.append((r, filt))
+
+    prev = split_row
+    for r, notes in right_rows:
+        if r > prev:
+            push_plain_range(table_rows, prev, r - 1)
+        table_rows.append((str(r), "; ".join(notes), section_tags(r)))
+        prev = r + 1
+    if prev <= rows_count:
+        push_plain_range(table_rows, prev, rows_count)
+
+    # Рендерим
+    df = pd.DataFrame(table_rows, columns=["Ряды", "Действия", "Сегмент"])
+    st.dataframe(df, use_container_width=True, hide_index=True)
+
+    if key:
+        st.session_state[key] = table_rows
+# -----------------------------
 # Ввод параметров
 # -----------------------------
 st.header("Перед / Спинка")
