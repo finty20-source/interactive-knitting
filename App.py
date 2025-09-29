@@ -519,10 +519,10 @@ if st.button("🔄 Рассчитать"):
         neck_st=neck_st,
         neck_rows=neck_rows_back,
         neck_start_row=neck_start_row_back,
-        st_shldr=st_shldr,
-        rows_slope=rows_slope,
+        st_shoulders=2 * st_shldr,   # <-- вот так
+        shoulder_start_row=shoulder_start_row,
         rows_total=rows_total
-    )
+   )
 
     # 4. Слияние и коррекция
     actions_back = merge_actions(actions_back, rows_total)
