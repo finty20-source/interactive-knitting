@@ -552,10 +552,10 @@ def make_table_back_split(actions, rows_count, rows_to_armhole_end, neck_start_r
         table_rows.append((str(a) if a==b else f"{a}-{b}", "Прямо", seg))
 
     def clean(txt: str) -> str:
-    return (txt.replace("[L]", "")
-               .replace("[R]", "")
-               .replace("(каждое плечо)", "")
-               .strip())
+        return (txt.replace("[L]", "")
+                   .replace("[R]", "")
+                   .replace("(каждое плечо)", "")
+                   .strip())
 
     def pick_left(notes):
         keep = []
