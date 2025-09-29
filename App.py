@@ -443,7 +443,7 @@ def make_table_front_split(actions, rows_count, rows_to_armhole_end, neck_start_
     # Ряд разделения показываем всегда
     table_rows.append((str(split_row), "; ".join(merged[split_row]), section_tags(split_row)))
 
-    def left_notes(notes, row=None):
+def left_notes(notes, row=None):
     out = []
     for n in notes:
         ln = n.lower()
