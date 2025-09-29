@@ -536,6 +536,12 @@ def make_table_back_split(actions, rows_count, rows_to_armhole_end, neck_start_r
 
     rows_sorted = sorted(merged.keys())
 
+        # ряд разделения
+    split_notes = merged[split_row]
+    # убираем из этого ряда скосы плеча, оставляем только горловину
+    split_notes = [n for n in split_notes if "скос плеча" not in n.lower()]
+    table_rows.append((str(split_row), "; ".join(split_notes), section_tags(split_row)))
+
     # ищем ряд разделения
     split_row = None
     for r in rows_sorted:
