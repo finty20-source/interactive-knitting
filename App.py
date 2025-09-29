@@ -160,7 +160,9 @@ def calc_round_neckline(total_stitches, total_rows, start_row, rows_total, strai
 # Скос плеча
 # -----------------------------
 def slope_shoulders(total_stitches, start_row, end_row, rows_total):
-    """Левое плечо — чётные ряды, правое — со смещением на +1"""
+    """
+    Левое и правое плечо: убавки синхронно в ЧЁТНЫХ рядах.
+    """
     if total_stitches <= 0:
         return [], []
 
@@ -173,11 +175,12 @@ def slope_shoulders(total_stitches, start_row, end_row, rows_total):
     rem  = total_stitches % steps
 
     left_actions, right_actions = [], []
+
     for i, r in enumerate(rows):
         dec = base + (1 if i < rem else 0)
         left_actions.append((r, f"-{dec} п. скос плеча (левое плечо)"))
-        if r+1 <= rows_total:
-            right_actions.append((r+1, f"-{dec} п. скос плеча (правое плечо)"))
+        right_actions.append((r, f"-{dec} п. скос плеча (правое плечо)"))
+
     return left_actions, right_actions
 
 # -----------------------------
