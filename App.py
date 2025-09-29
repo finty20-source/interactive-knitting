@@ -178,8 +178,8 @@ def slope_shoulders(total_stitches, start_row, end_row, rows_total):
 
     for i, r in enumerate(rows):
         dec = base + (1 if i < rem else 0)
-        left_actions.append((r, f"-{dec} п. скос плеча (левое плечо)"))
-        right_actions.append((r, f"-{dec} п. скос плеча (правое плечо)"))
+        left_actions.append((r, f"-{dec} п. скос плеча"))
+        right_actions.append((r, f"-{dec} п. скос плеча"))
 
     return left_actions, right_actions
 
