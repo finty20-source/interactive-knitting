@@ -525,6 +525,14 @@ def right_notes(notes, row=None, include_split=False):
 # Таблица спинки с разделением на плечи
 # -----------------------------
 def make_table_back_split(actions, rows_count, rows_to_armhole_end, neck_start_row, shoulder_start_row, key=None):
+    """
+    Делит инструкцию спинки на:
+    1) До разделения (включая ряд с центральным закрытием горловины),
+    2) ЛЕВОЕ ПЛЕЧО,
+    3) ПРАВОЕ ПЛЕЧО (начиная с того же split_row).
+    """
+
+    # Собираем ряды -> список действий
     merged = defaultdict(list)
     for row, note in actions:
         if isinstance(row, int) and 1 <= row <= rows_count:
@@ -536,20 +544,12 @@ def make_table_back_split(actions, rows_count, rows_to_armhole_end, neck_start_r
 
     rows_sorted = sorted(merged.keys())
 
-        # ряд разделения
-    split_notes = merged[split_row]
-    # убираем из этого ряда скосы плеча, оставляем только горловину
-    split_notes = [n for n in split_notes if "скос плеча" not in n.lower()]
-    table_rows.append((str(split_row), "; ".join(split_notes), section_tags(split_row)))
-
-    # ищем ряд разделения
+    # Ищем ряд разделения
     split_row = None
     for r in rows_sorted:
-        joined = " ; ".join(merged[r]).lower()
-        if "разделение на плечи" in joined:
+        if any("разделение на плечи" in n.lower() for n in merged[r]):
             split_row = r
             break
-
     if split_row is None:
         make_table_full(actions, rows_count, rows_to_armhole_end, neck_start_row, shoulder_start_row, key=key)
         return
@@ -574,7 +574,7 @@ def make_table_back_split(actions, rows_count, rows_to_armhole_end, neck_start_r
         else:
             table_rows.append((f"{a}-{b}", "Прямо", section_tags(a)))
 
-    # ---------- ДО РАЗДЕЛЕНИЯ ----------
+    # ---------- 1) ДО РАЗДЕЛЕНИЯ ----------
     table_rows = []
     prev = 1
     for r in [x for x in rows_sorted if x < split_row]:
@@ -585,33 +585,16 @@ def make_table_back_split(actions, rows_count, rows_to_armhole_end, neck_start_r
     if prev <= split_row - 1:
         push_plain_range(table_rows, prev, split_row - 1)
 
-    # ряд разделения
-    table_rows.append((str(split_row), "; ".join(merged[split_row]), section_tags(split_row)))
+    # В ряду разделения показываем только горловину (без скосов!)
+    split_notes = [n for n in merged[split_row] if "горловина" in n.lower()]
+    if split_notes:
+        table_rows.append((str(split_row), "; ".join(split_notes), section_tags(split_row)))
 
-    # фильтры
-    def left_notes(notes):
-        return [n for n in notes if "левое плечо" in n.lower() or "каждое плечо" in n.lower()]
-
-    def right_notes(notes, include_split=False):
-        out = []
-        for n in notes:
-            ln = n.lower()
-            if "правое плечо" in ln or "каждое плечо" in ln:
-                out.append(n)
-        if include_split:
-            # добавляем только пометку "разделение", но не дублируем горловину
-            for n in notes:
-                ln = n.lower()
-                if "разделение на плечи" in ln and n not in out:
-                    out.append(n)
-            out = [x for x in out if not ("горловина" in x.lower() and "разделение" in x.lower())]
-        return out
-
-    # ---------- ЛЕВОЕ ПЛЕЧО ----------
+    # ---------- 2) ЛЕВОЕ ПЛЕЧО ----------
     table_rows.append(("— ЛЕВОЕ ПЛЕЧО —", "", ""))
     left_rows = []
     for r in [x for x in rows_sorted if x > split_row]:
-        filt = left_notes(merged[r])
+        filt = [n for n in merged[r] if "левое плечо" in n.lower() or "каждое плечо" in n.lower() or "горловина" in n.lower()]
         if filt:
             left_rows.append((r, filt))
 
@@ -624,12 +607,14 @@ def make_table_back_split(actions, rows_count, rows_to_armhole_end, neck_start_r
     if prev <= rows_count:
         push_plain_range(table_rows, prev, rows_count)
 
-    # ---------- ПРАВОЕ ПЛЕЧО ----------
+    # ---------- 3) ПРАВОЕ ПЛЕЧО ----------
     table_rows.append((f"— ПРАВОЕ ПЛЕЧО — (вернитесь к ряду {split_row})", "", ""))
     right_rows = []
     candidate_rows = [split_row] + [x for x in rows_sorted if x > split_row]
     for r in candidate_rows:
-        filt = right_notes(merged[r], include_split=(r == split_row))
+        filt = [n for n in merged[r] if "правое плечо" in n.lower() or "каждое плечо" in n.lower() or "горловина" in n.lower()]
+        if r == split_row and any("разделение на плечи" in n.lower() for n in merged[r]):
+            filt.append("↳ переход к правому плечу")
         if filt:
             right_rows.append((r, filt))
 
@@ -642,12 +627,12 @@ def make_table_back_split(actions, rows_count, rows_to_armhole_end, neck_start_r
     if prev <= rows_count:
         push_plain_range(table_rows, prev, rows_count)
 
-    # рендер
+    # ---------- Рендер ----------
     df = pd.DataFrame(table_rows, columns=["Ряды", "Действия", "Сегмент"])
     st.dataframe(df, use_container_width=True, hide_index=True)
-
     if key:
         st.session_state[key] = table_rows
+
 # -----------------------------
 # Ввод параметров
 # -----------------------------
