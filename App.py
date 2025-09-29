@@ -489,9 +489,9 @@ def right_notes(notes, row=None, include_split=False):
     # включаем split_row, чтобы показать центральное закрытие и возможный скос, если он совпал
     candidate_rows = [split_row] + [x for x in rows_sorted if x > split_row]
     for r in candidate_rows:
-    filt = right_notes(merged[r], row=r, include_split=(r == split_row))
-    if filt:
-        right_rows.append((r, filt))
+        filt = right_notes(merged[r], row=r, include_split=(r == split_row))
+        if filt:
+            right_rows.append((r, filt))
 
     prev = split_row
     for r, notes in right_rows:
