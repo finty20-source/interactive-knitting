@@ -161,8 +161,9 @@ def calc_round_neckline(total_stitches, total_rows, start_row, rows_total, strai
 # -----------------------------
 def slope_shoulders(total_stitches, start_row, end_row, rows_total):
     """
-    Левое и правое плечо: убавки синхронно в ЧЁТНЫХ рядах.
-    Пометки [L]/[R] нужны только для разбиения таблицы; при выводе удаляются.
+    Скос плеча для спинки: левое и правое считаем раздельно.
+    Ставим служебные метки [L]/[R] (в таблице их удалим).
+    Оба плеча остаются в чётных рядах (как ты просила).
     """
     if total_stitches <= 0:
         return [], []
@@ -176,12 +177,10 @@ def slope_shoulders(total_stitches, start_row, end_row, rows_total):
     rem  = total_stitches % steps
 
     left_actions, right_actions = [], []
-
     for i, r in enumerate(rows):
         dec = base + (1 if i < rem else 0)
-        left_actions.append((r, f"-{dec} п. скос плеча [L]"))
+        left_actions.append((r,  f"-{dec} п. скос плеча [L]"))
         right_actions.append((r, f"-{dec} п. скос плеча [R]"))
-
     return left_actions, right_actions
 
 # -----------------------------
@@ -514,13 +513,6 @@ def right_notes(notes, row=None, include_split=False):
 # Таблица СПИНКИ с разделением на плечи
 # -----------------------------
 def make_table_back_split(actions, rows_count, rows_to_armhole_end, neck_start_row, shoulder_start_row, key=None):
-    """
-    Строит инструкцию для спинки в три блока:
-      1) до ряда разделения (центральное закрытие горловины),
-      2) — ЛЕВОЕ ПЛЕЧО — (горловина + скос [L]),
-      3) — ПРАВОЕ ПЛЕЧО — (вернитесь к ряду N) (горловина + скос [R]).
-    Если разделение не найдено — тихо падаем на make_table_full.
-    """
     merged = defaultdict(list)
     for row, note in actions:
         if isinstance(row, int) and 1 <= row <= rows_count:
@@ -532,45 +524,33 @@ def make_table_back_split(actions, rows_count, rows_to_armhole_end, neck_start_r
 
     rows_sorted = sorted(merged.keys())
 
-    # ищем ряд центрального закрытия горловины (разделение на плечи)
+    # ищем ряд центрального закрытия горловины
     split_row = None
     for r in rows_sorted:
         if any("разделение на плечи" in n.lower() for n in merged[r]):
             split_row = r
             break
-
     if split_row is None:
         make_table_full(actions, rows_count, rows_to_armhole_end, neck_start_row, shoulder_start_row, key=key)
         return
 
-    # хелперы
-    def push_plain_range(table_rows, a, b):
-        if a > b:
-            return
-        seg = section_tags(a, rows_to_armhole_end, neck_start_row, shoulder_start_row)
-        if a == b:
-            table_rows.append((str(a), "Прямо", seg))
-        else:
-            table_rows.append((f"{a}-{b}", "Прямо", seg))
+    def section_tags_local(row):
+        tags = []
+        if row <= rows_to_armhole_end:
+            tags.append("Низ изделия")
+        if rows_to_armhole_end < row < shoulder_start_row:
+            tags.append("Пройма")
+        if neck_start_row and row >= neck_start_row:
+            tags.append("Горловина")
+        if shoulder_start_row and row >= shoulder_start_row:
+            tags.append("Скос плеча")
+        return " + ".join(tags) if tags else "—"
 
-    table_rows = []
+    def push_plain(table_rows, a, b):
+        if a > b: return
+        seg = section_tags_local(a)
+        table_rows.append((str(a) if a==b else f"{a}-{b}", "Прямо", seg))
 
-    # ---------- 1) ДО РАЗДЕЛЕНИЯ ----------
-    prev = 1
-    for r in [x for x in rows_sorted if x < split_row]:
-        if r > prev:
-            push_plain_range(table_rows, prev, r-1)
-        table_rows.append((str(r), "; ".join(merged[r]),
-                           section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
-        prev = r + 1
-    if prev <= split_row - 1:
-        push_plain_range(table_rows, prev, split_row - 1)
-
-    # сам ряд разделения выводим один раз — тут
-    table_rows.append((str(split_row), "; ".join(merged[split_row]),
-                       section_tags(split_row, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
-
-    # функции фильтра заметок плеч (удаляем служебные метки перед выводом)
     def clean(txt: str) -> str:
         return (txt.replace("[L]", "").replace("[R]", "")
                    .replace("(каждое плечо)", "").strip())
@@ -594,38 +574,40 @@ def make_table_back_split(actions, rows_count, rows_to_armhole_end, neck_start_r
                 keep.append(clean(n))
         return keep
 
-    # ---------- 2) ЛЕВОЕ ПЛЕЧО ----------
-    table_rows.append(("— ЛЕВОЕ ПЛЕЧО (спинка) —", "", ""))
+    table_rows = []
+    # 1) до разделения
+    prev = 1
+    for r in [x for x in rows_sorted if x < split_row]:
+        if r > prev: push_plain(table_rows, prev, r-1)
+        table_rows.append((str(r), "; ".join(merged[r]), section_tags_local(r)))
+        prev = r + 1
+    if prev <= split_row-1: push_plain(table_rows, prev, split_row-1)
 
+    # ряд разделения
+    table_rows.append((str(split_row), "; ".join(merged[split_row]), section_tags_local(split_row)))
+
+    # 2) левое плечо
+    table_rows.append(("— ЛЕВОЕ ПЛЕЧО (спинка) —", "", ""))
     prev = split_row + 1
     for r in [x for x in rows_sorted if x > split_row]:
         notes = pick_left(merged[r])
         if notes:
-            if r > prev:
-                push_plain_range(table_rows, prev, r-1)
-            table_rows.append((str(r), "; ".join(notes),
-                               section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
+            if r > prev: push_plain(table_rows, prev, r-1)
+            table_rows.append((str(r), "; ".join(notes), section_tags_local(r)))
             prev = r + 1
-    if prev <= rows_count:
-        push_plain_range(table_rows, prev, rows_count)
+    if prev <= rows_count: push_plain(table_rows, prev, rows_count)
 
-    # ---------- 3) ПРАВОЕ ПЛЕЧО ----------
+    # 3) правое плечо
     table_rows.append((f"— ПРАВОЕ ПЛЕЧО (спинка) — (вернитесь к ряду {split_row})", "", ""))
-
     prev = split_row
-    candidates = [split_row] + [x for x in rows_sorted if x > split_row]
-    for r in candidates:
+    for r in [split_row] + [x for x in rows_sorted if x > split_row]:
         notes = pick_right(merged[r], r)
         if notes:
-            if r > prev:
-                push_plain_range(table_rows, prev, r-1)
-            table_rows.append((str(r), "; ".join(notes),
-                               section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
+            if r > prev: push_plain(table_rows, prev, r-1)
+            table_rows.append((str(r), "; ".join(notes), section_tags_local(r)))
             prev = r + 1
-    if prev <= rows_count:
-        push_plain_range(table_rows, prev, rows_count)
+    if prev <= rows_count: push_plain(table_rows, prev, rows_count)
 
-    # вывод
     df = pd.DataFrame(table_rows, columns=["Ряды", "Действия", "Сегмент"])
     st.dataframe(df, use_container_width=True, hide_index=True)
     if key:
