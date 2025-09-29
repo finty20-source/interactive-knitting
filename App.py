@@ -152,7 +152,7 @@ def calc_round_neckline(total_stitches, total_rows, start_row, rows_total, strai
     parts  = split_total_into_steps(rest, steps)
 
     for r, v in zip(chosen, parts):
-        actions.append((r, f"-{v} п. горловина (каждое плечо)"))
+        actions.append((r, f"-{v} п. горловина"))
 
     return actions
 
