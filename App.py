@@ -777,7 +777,21 @@ if st.button("🔄 Рассчитать"):
     actions_back = fix_carriage_side(actions_back, method)
 
     # 5. Таблица
-    make_table_back_split(actions_back, rows_total, rows_to_armhole_end, neck_start_row_back, shoulder_start_row, key="table_back")
+    # вместо make_table_full:
+    make_table_back_split(
+        actions_back,
+        rows_total,
+        rows_to_armhole_end,
+        neck_start_row_back,
+        shoulder_start_row,
+        key="table_back"
+    )
+
+        def clean(txt: str) -> str:
+            return (txt.replace("[L]", "")
+                       .replace("[R]", "")
+                       .replace("(каждое плечо)", "")
+                       .strip())
     # -----------------------------
     # сохраняем для PDF
     # -----------------------------
