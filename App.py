@@ -469,9 +469,9 @@ def right_notes(notes, row=None, include_split=False):
     table_rows.append(("— ЛЕВОЕ ПЛЕЧО —", "", ""))
 
     for r in [x for x in rows_sorted if x > split_row]:
-    filt = left_notes(merged[r], row=r)
-    if filt:
-        left_rows.append((r, filt))
+        filt = left_notes(merged[r], row=r)
+        if filt:
+            left_rows.append((r, filt))
 
     prev = split_row + 1
     for r, notes in left_rows:
