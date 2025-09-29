@@ -745,4 +745,4 @@ if st.session_state.actions and st.session_state.actions_back:
     buffer.seek(0)
     st.download_button("📥 Скачать PDF", buffer, file_name="vyazanie_instructions.pdf", mime="application/pdf")
 else:
-    st.info("Сначала нажми «🔄 
+    st.info("Сначала нажмите '🔄 Рассчитать'")
