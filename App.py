@@ -12,6 +12,20 @@ def make_table_front_split(actions, rows_count, rows_to_armhole_end, neck_start_
         make_table_full(actions, rows_count, rows_to_armhole_end, neck_start_row, shoulder_start_row, key=key)
         return
 
+    def make_table_front_split(actions, rows_count, rows_to_armhole_end, neck_start_row, shoulder_start_row, key=None):
+    st.write("⚡ DEBUG: Запуск make_table_front_split")
+    st.write("Всего действий:", len(actions))
+
+    merged = defaultdict(list)
+    for row, note in actions:
+        if isinstance(row, int) and 1 <= row <= rows_count:
+            merged[row].append(note)
+
+    if not merged:
+        st.write("⚠️ merged пуст → вызываем make_table_full")
+        make_table_full(actions, rows_count, rows_to_armhole_end, neck_start_row, shoulder_start_row, key=key)
+        return
+
     # убираем дубли
     for row in merged:
         merged[row] = list(dict.fromkeys(merged[row]))
