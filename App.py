@@ -998,7 +998,7 @@ def plan_front_or_back(neck_st, neck_rows, neck_start_row,
 
     # 2) Плечо — ряды и объёмы
     shoulder_start_row = rows_total - rows_slope + 1
-    left_sh, right_sh = shoulders_plan(st_shldr, shoulder_start_row, rows_total)
+    left_sh, right_sh = shoulders_plan(st_shldr, shoulder_start_row, rows_total)  # до rows_total-1
 
     # Если плечо попадает в split_row — выкидываем этот шаг (правило: в split_row только горловина)
     if forbid_first_row_shoulder:
