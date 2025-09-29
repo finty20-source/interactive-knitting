@@ -82,36 +82,6 @@ def sym_decreases(total_sub, start_row, end_row, rows_total, label):
     return out
 
 # -----------------------------
-# Горловина + скос плеча (с разделением на левое/правое плечо)
-# -----------------------------
-def plan_neck_and_shoulders_split(
-    neck_st, neck_rows, neck_start_row,
-    st_shoulders, shoulder_start_row, rows_total,
-    straight_percent=0.20
-):
-    actions = []
-
-    # Горловина (с сохранением последних 20% рядов прямыми)
-    actions += calc_round_neckline(
-        total_stitches=neck_st,
-        total_rows=neck_rows,
-        start_row=neck_start_row,
-        rows_total=rows_total,
-        straight_spec=straight_percent
-    )
-
-    # Скос плеча (отдельно для левого и правого)
-    actions_left, actions_right = slope_shoulders(
-        total_stitches=st_shoulders // 2,
-        start_row=shoulder_start_row,
-        end_row=rows_total,
-        rows_total=rows_total
-    )
-    actions += actions_left + actions_right
-
-    return actions
-
-# -----------------------------
 # Пройма (круглая)
 # -----------------------------
 def calc_round_armhole(st_chest, st_shoulders, start_row, shoulder_start_row, rows_total, depth_percent=0.05, hold_percent=0.1):
@@ -145,6 +115,36 @@ def calc_round_armhole(st_chest, st_shoulders, start_row, shoulder_start_row, ro
     delta2 = st_shoulders - st_mid
     if delta2 > 0:
         actions += sym_increases(delta2, start_row+rows_smooth+rows_hold, end_row, rows_total, "пройма")
+
+    return actions
+
+# -----------------------------
+# Горловина + скос плеча (с разделением на левое/правое плечо)
+# -----------------------------
+def plan_neck_and_shoulders_split(
+    neck_st, neck_rows, neck_start_row,
+    st_shoulders, shoulder_start_row, rows_total,
+    straight_percent=0.20
+):
+    actions = []
+
+    # Горловина (с сохранением последних 20% рядов прямыми)
+    actions += calc_round_neckline(
+        total_stitches=neck_st,
+        total_rows=neck_rows,
+        start_row=neck_start_row,
+        rows_total=rows_total,
+        straight_spec=straight_percent
+    )
+
+    # Скос плеча (отдельно для левого и правого)
+    actions_left, actions_right = slope_shoulders(
+        total_stitches=st_shoulders // 2,
+        start_row=shoulder_start_row,
+        end_row=rows_total,
+        rows_total=rows_total
+    )
+    actions += actions_left + actions_right
 
     return actions
 
