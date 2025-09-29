@@ -457,9 +457,10 @@ actions += plan_neck_and_shoulders_split(
     neck_st=neck_st,
     neck_rows=neck_rows_front,
     neck_start_row=neck_start_row_front,
-    st_shldr=st_shldr,
-    rows_slope=rows_slope,
-    rows_total=rows_total
+    st_shoulders=st_shldr,
+    shoulder_start_row=shoulder_start_row,
+    rows_total=rows_total,
+    straight_percent=0.20
 )
 
 # 4. Слияние и коррекция
