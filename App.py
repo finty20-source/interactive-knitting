@@ -85,77 +85,68 @@ def plan_neck_and_shoulders_split(
     neck_st: int,
     neck_rows: int,
     neck_start_row: int,
-    st_shldr: int,        # ширина одного плеча в петлях
-    rows_slope: int,      # высота скоса в рядах
-    rows_total: int,
-    straight_percent: float = 0.10
+    st_shldr: int,
+    rows_slope: int,
+    rows_total: int
 ):
     """
-    Горловина + плечи (отдельно для левого и правого):
-    - первый шаг горловины = 60% (чётное число),
-    - остаток горловины распределяется по рядам:
-        * левое плечо — чётные ряды,
-        * правое плечо — нечётные ряды,
-    - последние straight_percent глубины горловины = прямо,
-    - плечо плавно уходит в ноль за rows_slope рядов.
+    Горловина + плечи (с разделением лево/право).
+    - Первое закрытие горловины = 60% (чётное число).
+    - Остаток равномерно убавляется по рядам (чередуя левое/правое плечо).
+    - Последние 20% глубины горловины — прямые ряды (без убавок по горловине).
+    - Плечи добирают остаток петель по своим скосам.
     """
 
-    actions_left, actions_right = [], []
-
+    actions = []
     if neck_st <= 0 or neck_rows <= 0 or st_shldr <= 0:
-        return actions_left, actions_right
+        return actions
 
-    # 1) Центральное закрытие горловины
+    # --- шаг 1: центральное закрытие ---
     first_dec = int(round(neck_st * 0.60))
     if first_dec % 2 == 1:
         first_dec += 1
     if first_dec > neck_st:
         first_dec = neck_st if neck_st % 2 == 0 else neck_st - 1
-    rest = max(0, neck_st - first_dec)
+    rest = neck_st - first_dec
 
-    per_shoulder = st_shldr + (neck_st - first_dec) // 2
+    central_row = max(6, neck_start_row)
+    actions.append((central_row, f"-{first_dec} п. горловина (центр, разделение на плечи)"))
 
-    central_row = max(6, min(neck_start_row, rows_total-2))
-    actions_left.append((central_row, f"-{first_dec//2} п. горловина (левое плечо, центр)"))
-    actions_right.append((central_row, f"-{first_dec//2} п. горловина (правое плечо, центр)"))
+    # --- шаг 2: ряды для горловины (с прямыми сверху = 20%) ---
+    straight_rows = max(2, int(round(neck_rows * 0.20)))
+    last_neck_row = neck_start_row + neck_rows - 1 - straight_rows
+    neck_rows_list = list(range(central_row + 1, last_neck_row + 1))
 
-    # 2) Убавки горловины
-    straight_rows = max(2, int(round(neck_rows * straight_percent)))
-    last_neck_dec_row = min(neck_start_row + neck_rows - 1 - straight_rows, rows_total - 2)
-
-    # ряды для убавок
-    neck_rows_left = list(range(central_row+2, last_neck_dec_row+1, 2))   # чётные
-    neck_rows_right= list(range(central_row+1, last_neck_dec_row+1, 2))   # нечётные
-
-    # распределим остаток
-    steps = min(len(neck_rows_left) + len(neck_rows_right), rest)
-    idxs  = np.linspace(0, steps-1, num=steps, dtype=int)
-
+    # распределяем остаток (чередуя левое/правое плечо)
     left_used = right_used = 0
-    for k, i in enumerate(idxs):
-        if k % 2 == 0 and neck_rows_left:
-            r = neck_rows_left.pop(0)
-            actions_left.append((r, "-1 п. горловина (левое плечо)"))
-            left_used += 1
-        elif neck_rows_right:
-            r = neck_rows_right.pop(0)
-            actions_right.append((r, "-1 п. горловина (правое плечо)"))
-            right_used += 1
+    if rest > 0 and neck_rows_list:
+        steps = min(len(neck_rows_list), rest)
+        idxs = np.linspace(0, len(neck_rows_list) - 1, num=steps, dtype=int)
+        chosen = [neck_rows_list[i] for i in idxs]
+        for k, r in enumerate(chosen):
+            if k % 2 == 0:
+                actions.append((r, "-1 п. горловина (левое плечо)"))
+                left_used += 1
+            else:
+                actions.append((r, "-1 п. горловина (правое плечо)"))
+                right_used += 1
 
-    # 3) Скос плеча
+    # --- шаг 3: плечи (скос до нуля) ---
+    need_left = st_shldr - left_used
+    need_right = st_shldr - right_used
+
     shoulder_start_row = rows_total - rows_slope + 1
-    rows_even = list(range(shoulder_start_row, rows_total, 2))
-    rows_odd  = list(range(shoulder_start_row+1, rows_total, 2))
+    left_rows = allowed_even_rows(shoulder_start_row, rows_total, rows_total)
+    right_rows = [r+1 for r in left_rows if r+1 <= rows_total-2]
 
-    parts_left  = split_total_into_steps(max(0, per_shoulder - left_used), len(rows_even))
-    parts_right = split_total_into_steps(max(0, per_shoulder - right_used), len(rows_odd))
+    # распределяем убавки скоса равномерно
+    for rows, need, side in [(left_rows, need_left, "левое плечо"),
+                             (right_rows, need_right, "правое плечо")]:
+        parts = split_total_into_steps(need, len(rows))
+        for r, v in zip(rows, parts):
+            actions.append((r, f"-{v} п. скос плеча ({side})"))
 
-    for r, v in zip(rows_even, parts_left):
-        actions_left.append((r, f"-{v} п. скос плеча (левое плечо)"))
-    for r, v in zip(rows_odd, parts_right):
-        actions_right.append((r, f"-{v} п. скос плеча (правое плечо)"))
-
-    return actions_left, actions_right
+    return actions
 
 # -----------------------------
 # Пройма (круглая)
