@@ -618,7 +618,10 @@ if st.session_state.actions and st.session_state.actions_back:
 
     # Таблица переда
     elements.append(Paragraph("Инструкция для переда", styles['Heading2']))
-    tbl_front = Table(st.session_state.table_front, hAlign="LEFT")
+    tbl_front_data = st.session_state.get("table_front", [])
+    if not tbl_front_data:
+        tbl_front_data = [["—", "Нет данных", "—"]]
+    tbl_front = Table(tbl_front_data, hAlign="LEFT")
     tbl_front.setStyle(TableStyle([
         ("FONTNAME", (0,0), (-1,-1), "DejaVuSans"),
         ("FONTSIZE", (0,0), (-1,-1), 10),
@@ -629,7 +632,10 @@ if st.session_state.actions and st.session_state.actions_back:
 
     # Таблица спинки
     elements.append(Paragraph("Инструкция для спинки", styles['Heading2']))
-    tbl_back = Table(st.session_state.table_back, hAlign="LEFT")
+    tbl_back_data = st.session_state.get("table_back", [])
+    if not tbl_back_data:
+        tbl_back_data = [["—", "Нет данных", "—"]]
+    tbl_back = Table(tbl_back_data, hAlign="LEFT")
     tbl_back.setStyle(TableStyle([
         ("FONTNAME", (0,0), (-1,-1), "DejaVuSans"),
         ("FONTSIZE", (0,0), (-1,-1), 10),
