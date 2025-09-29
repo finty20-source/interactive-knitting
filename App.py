@@ -2,8 +2,6 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 from collections import defaultdict
-
-st.title("🧶 Интерактивное вязание — полный расчёт модели")import streamlit as st
 import numpy as np
 import pandas as pd
 from collections import defaultdict
