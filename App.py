@@ -444,13 +444,15 @@ def make_table_front_split(actions, rows_count, rows_to_armhole_end, neck_start_
     table_rows.append((str(split_row), "; ".join(merged[split_row]), section_tags(split_row)))
 
     # Вспомогательные фильтры
-    def left_notes(notes):
-        out = []
-        for n in notes:
-            ln = n.lower()
-            if "левое плечо" in ln or "каждое плечо" in ln:
-                out.append(n)
-        return out
+    def left_notes(notes, row=None):
+    out = []
+    for n in notes:
+        ln = n.lower()
+        if "каждое плечо" in ln:
+            out.append(n.replace("(каждое плечо)", "").strip())
+        elif row is not None and row % 2 == 0:  # чётный ряд → левое плечо
+            out.append(n.replace("(левое плечо)", "").strip())
+    return out
 
     def right_notes(notes, include_split=False):
         out = []
