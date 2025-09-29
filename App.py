@@ -14,6 +14,8 @@ if "actions" not in st.session_state:
     st.session_state.st_hip = 0
     st.session_state.rows_total = 0
     st.session_state.rows_bottom = 0
+    st.session_state.table_front = []
+    st.session_state.table_back = []
 
 # -----------------------------
 # Конвертеры
