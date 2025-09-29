@@ -505,7 +505,7 @@ if st.button("🔄 Рассчитать"):
     actions = fix_carriage_side(actions, method)  # ⚡️ учитываем сторону каретки
     make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, key="table_front")
 
-    # ----- СПИНКА -----
+        # ----- СПИНКА -----
     st.subheader("📋 Инструкция для спинки")
     actions_back = []
 
@@ -526,11 +526,27 @@ if st.button("🔄 Рассчитать"):
         actions_back += sym_decreases(-delta_armh, armhole_start_row, armhole_end_row, rows_total, "пройма")
 
     # 3. Горловина (спинка)
-    actions_back += calc_round_neckline(neck_st, neck_rows_back, neck_start_row_back, rows_total, straight_spec=0.10)
+    actions_back += calc_round_neckline(
+        neck_st,
+        neck_rows_back,
+        neck_start_row_back,
+        rows_total,
+        straight_spec=0.10
+    )
 
     # 4. Скос плеча (отдельно левое + правое)
-    actions_left_back, actions_right_back = slope_shoulders(st_shldr, shoulder_start_row, rows_total, rows_total)
+    actions_left_back, actions_right_back = slope_shoulders(
+        st_shldr,
+        shoulder_start_row,
+        rows_total,
+        rows_total
+    )
     actions_back += actions_left_back + actions_right_back
+
+    # 5. Слияние и вывод таблицы
+    actions_back = merge_actions(actions_back, rows_total)
+    actions_back = fix_carriage_side(actions_back, method)
+    make_table_full(actions_back, rows_total, rows_to_armhole_end, neck_start_row_back, shoulder_start_row, key="table_back")
 
     # -----------------------------
     # сохраняем для PDF
