@@ -82,6 +82,69 @@ def sym_decreases(total_sub, start_row, end_row, rows_total, label):
     return out
 
 # -----------------------------
+# Скос плеча
+# -----------------------------
+def slope_shoulders(total_stitches, start_row, end_row, rows_total):
+    """Левое плечо — чётные ряды, правое — со смещением на +1"""
+    if total_stitches <= 0:
+        return [], []
+
+    rows = allowed_even_rows(start_row, end_row, rows_total)
+    if not rows:
+        return [], []
+
+    steps = len(rows)
+    base = total_stitches // steps
+    rem  = total_stitches % steps
+
+    left_actions, right_actions = [], []
+    for i, r in enumerate(rows):
+        dec = base + (1 if i < rem else 0)
+        left_actions.append((r, f"-{dec} п. скос плеча (левое плечо)"))
+        if r+1 <= rows_total:
+            right_actions.append((r+1, f"-{dec} п. скос плеча (правое плечо)"))
+    return left_actions, right_actions
+
+
+# -----------------------------
+# Горловина (круглая, с прямыми рядами сверху)
+# -----------------------------
+def calc_round_neckline(total_stitches, total_rows, start_row, rows_total, straight_spec=0.20):
+    if total_stitches <= 0 or total_rows <= 0:
+        return []
+
+    # первый шаг — 60%
+    first_dec = int(round(total_stitches * 0.60))
+    if first_dec % 2 == 1:
+        first_dec += 1
+    rest = total_stitches - first_dec
+
+    # последние straight_spec процентов глубины — прямые
+    straight_rows = max(2, int(round(total_rows * straight_spec)))
+    neck_end_by_depth = start_row + total_rows - 1 - straight_rows
+    effective_end = min(neck_end_by_depth, rows_total - 2)
+
+    rows = allowed_even_rows(start_row, effective_end, rows_total)
+    if not rows:
+        return []
+
+    actions = [(rows[0], f"-{first_dec} п. горловина (середина, разделение на плечи)")]
+
+    if rest <= 0 or len(rows) == 1:
+        return actions
+
+    rest_rows = rows[1:]
+    steps = min(len(rest_rows), rest)
+    idxs   = np.linspace(0, len(rest_rows)-1, num=steps, dtype=int)
+    chosen = [rest_rows[i] for i in idxs]
+    parts  = split_total_into_steps(rest, steps)
+
+    for r, v in zip(chosen, parts):
+        actions.append((r, f"-{v} п. горловина (каждое плечо)"))
+
+    return actions
+
+# -----------------------------
 # Пройма (круглая)
 # -----------------------------
 def calc_round_armhole(st_chest, st_shoulders, start_row, shoulder_start_row, rows_total, depth_percent=0.05, hold_percent=0.1):
