@@ -628,7 +628,7 @@ if st.button("🔄 Рассчитать"):
     actions = fix_carriage_side(actions, method)
 
     # 5. Таблица
-    make_table_full(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, key="table_front")
+    make_table_front_split(actions, rows_total, rows_bottom, neck_start_row_front, shoulder_start_row, key="table_front")
     # -----------------------------
     # 📋 Спинка
     # -----------------------------
