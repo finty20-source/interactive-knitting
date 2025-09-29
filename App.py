@@ -581,11 +581,13 @@ def make_table_back_split(actions, rows_count, rows_to_armhole_end, neck_start_r
 
     def right_notes(notes, include_split=False):
         out = [n for n in notes if "правое плечо" in n.lower() or "каждое плечо" in n.lower()]
-            if include_split:
+        if include_split:
         # только показать разделение, НО без переноса в другие ряды
         for n in notes:
             if "разделение на плечи" in n.lower() and n not in out:
                 out.append(n)
+    # ⚡️ убираем из правого блока дублирующуюся горловину
+    out = [x for x in out if "горловина" not in x.lower() or "разделение" not in x.lower()]
     # ⚡️ убираем из правого блока дублирующуюся горловину
     out = [x for x in out if "горловина" not in x.lower() or "разделение" not in x.lower()]
         return out
