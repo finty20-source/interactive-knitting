@@ -132,9 +132,15 @@ def calc_round_neckline(total_stitches, total_rows, start_row, rows_total, strai
     rest = total_stitches - first_dec
 
     # последние straight_spec процентов глубины — прямые
-    straight_rows = max(2, int(round(total_rows * straight_spec)))
+    straight_ratio = max(straight_spec, 0.20)
+    straight_rows = int(np.ceil(total_rows * straight_ratio))
+    straight_rows = max(1, straight_rows)
+    straight_rows = min(straight_rows, max(total_rows - 1, 0))
+
     neck_end_by_depth = start_row + total_rows - 1 - straight_rows
-    effective_end = min(neck_end_by_depth, rows_total - 2)
+    if neck_end_by_depth < start_row:
+        neck_end_by_depth = start_row
+    effective_end = max(start_row, min(neck_end_by_depth, rows_total - 2))
 
     rows = allowed_even_rows(start_row, effective_end, rows_total)
     if not rows:
@@ -217,55 +223,97 @@ def plan_neck_and_shoulders_split(
 # Слияние действий (горловина + плечо)
 # -----------------------------
 def merge_actions(actions, rows_total):
-    """
-    Правила:
-    - горловина и скос плеча могут совпасть только в САМОМ ПЕРВОМ ряду горловины,
-      в остальных случаях мы их разносим.
-    - горловина остаётся в своём ряду.
-    - скос переносим на +1 ряд (если занят — ищем дальше).
-    """
+    """Объединяем действия по рядам и разводим конфликты горловины/плеч."""
     merged = defaultdict(list)
     for row, note in actions:
-        merged[row].append(note)
+        if isinstance(row, int):
+            merged[row].append(note)
 
-    fixed = []
-    used_rows = set()
-    first_neck_row = None  # запомним первый ряд горловины
+    # убираем дубли в одном ряду (сохраняя порядок)
+    for row, notes in merged.items():
+        seen = set()
+        unique = []
+        for note in notes:
+            if note not in seen:
+                unique.append(note)
+                seen.add(note)
+        merged[row] = unique
 
-    # сначала найдём первый ряд горловины
-    for row in sorted(merged.keys()):
-        if any("горловина" in n for n in merged[row]):
-            first_neck_row = row
+    split_row = None
+    for row in sorted(merged):
+        if any("разделение на плечи" in n.lower() for n in merged[row]):
+            split_row = row
             break
 
-    for row in sorted(merged.keys()):
+    final_map = defaultdict(list)
+    blocked_rows = set()
+
+    def add_non_shoulder(row, notes):
+        if not notes:
+            return
+        final_map[row].extend(notes)
+        blocked_rows.add(row)
+
+    def find_spot_for_shoulder(start_row):
+        row = start_row
+        if split_row is not None and start_row == split_row:
+            row = split_row + 1
+        if row % 2 == 1:
+            row += 1
+        if row < 1:
+            row = 1
+        upper_limit = max(1, rows_total - 1)
+        if row > upper_limit:
+            row = upper_limit
+        if row % 2 == 1:
+            row = row - 1 if row > 1 else row + 1
+
+        while row in blocked_rows and row < upper_limit:
+            row += 1
+            if row % 2 == 1:
+                row += 1
+        if row > upper_limit:
+            row = upper_limit
+            if row % 2 == 1 and row > 1:
+                row -= 1
+        if row in blocked_rows:
+            candidate = row
+            while candidate > 1:
+                candidate -= 1
+                if candidate % 2 == 1:
+                    candidate -= 1
+                if candidate <= 0:
+                    break
+                if candidate not in blocked_rows:
+                    row = candidate
+                    break
+        return max(1, row)
+
+    for row in sorted(merged):
         notes = merged[row]
+        lower_notes = [n.lower() for n in notes]
 
-        if ("горловина" in " ".join(notes)) and ("скос плеча" in " ".join(notes)):
-            # если это первый ряд горловины → оставляем вместе
-            if row == first_neck_row:
-                fixed.append((row, "; ".join(notes)))
-                used_rows.add(row)
-            else:
-                # разделяем: горловина в своём ряду, скос переносим выше
-                shoulder_notes = [n for n in notes if "скос плеча" in n]
-                neck_notes     = [n for n in notes if "горловина" in n]
+        neck_notes = [n for n, ln in zip(notes, lower_notes) if "горловина" in ln]
+        shoulder_notes = [n for n, ln in zip(notes, lower_notes) if "скос плеча" in ln]
+        other_notes = [n for n in notes if n not in neck_notes and n not in shoulder_notes]
 
-                fixed.append((row, "; ".join(neck_notes)))
-                used_rows.add(row)
+        # Горловину оставляем на месте
+        keep_notes = neck_notes + other_notes
+        if keep_notes:
+            add_non_shoulder(row, keep_notes)
 
-                new_row = row + 1
-                while new_row in used_rows and new_row < rows_total:
-                    new_row += 1
+        # Скос плеча переносим при необходимости
+        for note in shoulder_notes:
+            target_row = find_spot_for_shoulder(row)
+            if note not in final_map[target_row]:
+                final_map[target_row].append(note)
 
-                for n in shoulder_notes:
-                    fixed.append((new_row, n))
-                    used_rows.add(new_row)
-        else:
-            fixed.append((row, "; ".join(notes)))
-            used_rows.add(row)
+    result = []
+    for row in sorted(final_map):
+        joined = "; ".join(final_map[row])
+        result.append((row, joined))
 
-    return sorted(fixed, key=lambda x: int(str(x[0]).split('-')[0]))
+    return result
 
 # -----------------------------
 # Учёт стороны каретки
@@ -314,7 +362,7 @@ def section_tags(row, rows_to_armhole_end, neck_start_row, shoulder_start_row):
     if shoulder_start_row and row >= shoulder_start_row:
         tags.append("Скос плеча")
     return " + ".join(tags) if tags else "—"
-    
+
 # -----------------------------
 # Таблица + сегменты
 # -----------------------------
@@ -376,261 +424,237 @@ def parse_inputs():
 # Таблица переда с разделением на плечи
 # -----------------------------
 def make_table_front_split(actions, rows_count, rows_to_armhole_end, neck_start_row, shoulder_start_row, key=None):
-    """
-    Делит инструкцию переда на:
-    1) До ряда разделения на плечи,
-    2) ЛЕВОЕ ПЛЕЧО,
-    3) ПРАВОЕ ПЛЕЧО (с возвратом к ряду разделения).
-    Если разделение не найдено — тихо падаем обратно на обычную make_table_full.
-    """
-    # Собираем ряды -> список действий
+    """Строим таблицу переда с отдельными блоками плеч."""
     merged = defaultdict(list)
     for row, note in actions:
         if isinstance(row, int) and 1 <= row <= rows_count:
             merged[row].append(note)
 
     if not merged:
-        # Нечего отрисовывать
         make_table_full(actions, rows_count, rows_to_armhole_end, neck_start_row, shoulder_start_row, key=key)
         return
 
-    rows_sorted = sorted(merged.keys())
+    for row, notes in merged.items():
+        seen = set()
+        unique = []
+        for note in notes:
+            if note not in seen:
+                unique.append(note)
+                seen.add(note)
+        merged[row] = unique
 
-    # Ищем ряд разделения (центральное закрытие горловины)
+    rows_sorted = sorted(merged.keys())
     split_row = None
     for r in rows_sorted:
-        joined = " ; ".join(merged[r]).lower()
-        if "разделение на плечи" in joined:
+        if any("разделение на плечи" in n.lower() for n in merged[r]):
             split_row = r
             break
 
     if split_row is None:
-        # Нет разделения — используем обычный рендер
         make_table_full(actions, rows_count, rows_to_armhole_end, neck_start_row, shoulder_start_row, key=key)
         return
 
-    def section_tags(row):
-        tags = []
-        if row <= rows_to_armhole_end:
-            tags.append("Низ изделия")
-        if rows_to_armhole_end < row < shoulder_start_row:
-            tags.append("Пройма")
-        if neck_start_row and row >= neck_start_row:
-            tags.append("Горловина")
-        if shoulder_start_row and row >= shoulder_start_row:
-            tags.append("Скос плеча")
-        return " + ".join(tags) if tags else "—"
-
-    def push_plain_range(table_rows, a, b):
-        if a > b:
+    def push_plain(table_rows, start, end):
+        if start > end:
             return
-        if a == b:
-            table_rows.append((str(a), "Прямо", section_tags(a)))
-        else:
-            table_rows.append((f"{a}-{b}", "Прямо", section_tags(a)))
+        segment = section_tags(start, rows_to_armhole_end, neck_start_row, shoulder_start_row)
+        label = str(start) if start == end else f"{start}-{end}"
+        table_rows.append((label, "Прямо", segment))
 
-    # ---------- 1) ДО РАЗДЕЛЕНИЯ ----------
+    def clean_notes(notes):
+        cleaned = []
+        for note in notes:
+            text = note.replace("[L]", "").replace("[R]", "")
+            text = " ".join(text.split())
+            cleaned.append(text)
+        return cleaned
+
     table_rows = []
     prev = 1
     for r in [x for x in rows_sorted if x < split_row]:
         if r > prev:
-            push_plain_range(table_rows, prev, r - 1)
-        table_rows.append((str(r), "; ".join(merged[r]), section_tags(r)))
+            push_plain(table_rows, prev, r - 1)
+        table_rows.append((str(r), "; ".join(clean_notes(merged[r])),
+                           section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
         prev = r + 1
     if prev <= split_row - 1:
-        push_plain_range(table_rows, prev, split_row - 1)
+        push_plain(table_rows, prev, split_row - 1)
 
-    # Ряд разделения показываем всегда
-    table_rows.append((str(split_row), "; ".join(merged[split_row]), section_tags(split_row)))
+    split_notes = [n for n in merged[split_row] if "горловина" in n.lower()]
+    if split_notes:
+        table_rows.append((str(split_row), "; ".join(clean_notes(split_notes)),
+                           section_tags(split_row, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
 
-def left_notes(notes, row=None):
-    out = []
-    for n in notes:
-        ln = n.lower()
-        if "каждое плечо" in ln:
-            out.append(n.replace("(каждое плечо)", "").strip())
-        elif row is not None and row % 2 == 0:  # чётный ряд → левое плечо
-            out.append(n.replace("(левое плечо)", "").strip())
-    return out
-
-def right_notes(notes, row=None, include_split=False):
-    out = []
-    for n in notes:
-        ln = n.lower()
-        if "каждое плечо" in ln:
-            out.append(n.replace("(каждое плечо)", "").strip())
-        elif row is not None and row % 2 == 1:  # нечётный ряд → правое плечо
-            out.append(n.replace("(правое плечо)", "").strip())
-        if include_split and "разделение на плечи" in ln and n not in out:
-            out.append(n)
-    return out
-
-    # ---------- 2) ЛЕВОЕ ПЛЕЧО ----------
+    # Левое плечо
     table_rows.append(("— ЛЕВОЕ ПЛЕЧО —", "", ""))
-
+    left_prev = split_row + 1
+    left_rows = []
     for r in [x for x in rows_sorted if x > split_row]:
-        filt = left_notes(merged[r], row=r)
-        if filt:
-            left_rows.append((r, filt))
+        selected = []
+        for note in merged[r]:
+            low = note.lower()
+            if "каждое плечо" in low or "[l]" in low or "левое" in low или "(слева" in low:
+                selected.append(note)
+            elif "горловина" in low and "[r]" not in low:
+                selected.append(note)
+        if selected:
+            left_rows.append((r, selected))
 
-    prev = split_row + 1
     for r, notes in left_rows:
-        if r > prev:
-            push_plain_range(table_rows, prev, r - 1)
-        table_rows.append((str(r), "; ".join(notes), section_tags(r)))
-        prev = r + 1
-    if prev <= rows_count:
-        push_plain_range(table_rows, prev, rows_count)
+        if r > left_prev:
+            push_plain(table_rows, left_prev, r - 1)
+        table_rows.append((str(r), "; ".join(clean_notes(notes)),
+                           section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
+        left_prev = r + 1
+    if left_prev <= rows_count:
+        push_plain(table_rows, left_prev, rows_count)
 
-    # ---------- 3) ПРАВОЕ ПЛЕЧО ----------
+    # Правое плечо
     table_rows.append((f"— ПРАВОЕ ПЛЕЧО — (вернитесь к ряду {split_row})", "", ""))
-
+    right_prev = split_row
     right_rows = []
-    # включаем split_row, чтобы показать центральное закрытие и возможный скос, если он совпал
     candidate_rows = [split_row] + [x for x in rows_sorted if x > split_row]
-    # внутри формирования right_rows
-
     for r in candidate_rows:
-        filt = right_notes(merged[r], include_split=(r == split_row))
-    if filt:
-            # если это split_row и в нём есть скос плеча [R] → переносим на +2 ряда (чтобы остаться на чётных)
-            moved = []
-            stay  = []
-            for n in filt:
-                if "скос плеча [R]" in n and r == split_row:
-                    moved.append(n)
-                else:
-                    stay.append(n)
-            if stay:
-                right_rows.append((r, stay))
-            for n in moved:
-                right_rows.append((r+2, [n]))  # перенос скоса на 2 ряда дальше
-    prev = split_row
-    for r, notes in right_rows:
-        if r > prev:
-            push_plain_range(table_rows, prev, r - 1)
-        table_rows.append((str(r), "; ".join(notes), section_tags(r)))
-        prev = r + 1
-    if prev <= rows_count:
-        push_plain_range(table_rows, prev, rows_count)
+        row_notes = merged.get(r, [])
+        selected = []
+        for note in row_notes:
+            low = note.lower()
+            if "каждое плечо" in low or "[r]" in low or "правое" in low or "(справа" in low:
+                selected.append(note)
+            elif "горловина" in low and "[l]" not in low:
+                selected.append(note)
+        if r == split_row and any("разделение на плечи" in n.lower() for n in row_notes):
+            selected.append("↳ переход к правому плечу")
+        if selected:
+            right_rows.append((r, selected))
 
-    # Рендерим
+    for r, notes in right_rows:
+        if r > right_prev:
+            push_plain(table_rows, right_prev, r - 1)
+        table_rows.append((str(r), "; ".join(clean_notes(notes)),
+                           section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
+        right_prev = r + 1
+    if right_prev <= rows_count:
+        push_plain(table_rows, right_prev, rows_count)
+
     df = pd.DataFrame(table_rows, columns=["Ряды", "Действия", "Сегмент"])
     st.dataframe(df, use_container_width=True, hide_index=True)
 
     if key:
         st.session_state[key] = table_rows
 
-# -----------------------------
-# Таблица спинки с разделением на плечи
-# -----------------------------
-    # В ряду разделения: только горловина
-    split_neck = [n for n in merged[split_row] if "горловина" in n.lower()]
-    split_shoulders = [n for n in merged[split_row] if "скос плеча" in n.lower()]
 
-    if split_neck:
-        table_rows.append((str(split_row), "; ".join(split_neck), section_tags(split_row)))
-
-    # Скосы плечей из split_row переносим на следующий ряд
-    if split_shoulders:
-        for n in split_shoulders:
-            if "левое" in n.lower():
-                merged[split_row + 1].append(n)
-            elif "правое" in n.lower():
-                merged[split_row + 1].append(n)
+def make_table_back_split(actions, rows_count, rows_to_armhole_end, neck_start_row, shoulder_start_row, key=None):
+    """Строим таблицу спинки с отдельными блоками плеч."""
+    merged = defaultdict(list)
+    for row, note in actions:
+        if isinstance(row, int) and 1 <= row <= rows_count:
+            merged[row].append(note)
 
     if not merged:
         make_table_full(actions, rows_count, rows_to_armhole_end, neck_start_row, shoulder_start_row, key=key)
         return
 
-    rows_sorted = sorted(merged.keys())
+    for row, notes in merged.items():
+        seen = set()
+        unique = []
+        for note in notes:
+            if note not in seen:
+                unique.append(note)
+                seen.add(note)
+        merged[row] = unique
 
-    # Ищем ряд разделения
+    rows_sorted = sorted(merged.keys())
     split_row = None
     for r in rows_sorted:
         if any("разделение на плечи" in n.lower() for n in merged[r]):
             split_row = r
             break
+
     if split_row is None:
         make_table_full(actions, rows_count, rows_to_armhole_end, neck_start_row, shoulder_start_row, key=key)
         return
 
-    def section_tags(row):
-        tags = []
-        if row <= rows_to_armhole_end:
-            tags.append("Низ изделия")
-        if rows_to_armhole_end < row < shoulder_start_row:
-            tags.append("Пройма")
-        if neck_start_row and row >= neck_start_row:
-            tags.append("Горловина")
-        if shoulder_start_row and row >= shoulder_start_row:
-            tags.append("Скос плеча")
-        return " + ".join(tags) if tags else "—"
-
-    def push_plain_range(table_rows, a, b):
-        if a > b:
+    def push_plain(table_rows, start, end):
+        if start > end:
             return
-        if a == b:
-            table_rows.append((str(a), "Прямо", section_tags(a)))
-        else:
-            table_rows.append((f"{a}-{b}", "Прямо", section_tags(a)))
+        segment = section_tags(start, rows_to_armhole_end, neck_start_row, shoulder_start_row)
+        label = str(start) if start == end else f"{start}-{end}"
+        table_rows.append((label, "Прямо", segment))
 
-    # ---------- 1) ДО РАЗДЕЛЕНИЯ ----------
+    def clean_notes(notes):
+        cleaned = []
+        for note in notes:
+            text = note.replace("[L]", "").replace("[R]", "")
+            text = " ".join(text.split())
+            cleaned.append(text)
+        return cleaned
+
     table_rows = []
     prev = 1
     for r in [x for x in rows_sorted if x < split_row]:
         if r > prev:
-            push_plain_range(table_rows, prev, r - 1)
-        table_rows.append((str(r), "; ".join(merged[r]), section_tags(r)))
+            push_plain(table_rows, prev, r - 1)
+        table_rows.append((str(r), "; ".join(clean_notes(merged[r])),
+                           section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
         prev = r + 1
     if prev <= split_row - 1:
-        push_plain_range(table_rows, prev, split_row - 1)
+        push_plain(table_rows, prev, split_row - 1)
 
-    # В ряду разделения показываем только горловину (без скосов!)
     split_notes = [n for n in merged[split_row] if "горловина" in n.lower()]
     if split_notes:
-        table_rows.append((str(split_row), "; ".join(split_notes), section_tags(split_row)))
+        table_rows.append((str(split_row), "; ".join(clean_notes(split_notes)),
+                           section_tags(split_row, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
 
-    # ---------- 2) ЛЕВОЕ ПЛЕЧО ----------
     table_rows.append(("— ЛЕВОЕ ПЛЕЧО —", "", ""))
+    left_prev = split_row + 1
     left_rows = []
     for r in [x for x in rows_sorted if x > split_row]:
-        filt = [n for n in merged[r] if "левое плечо" in n.lower() or "каждое плечо" in n.lower() or "горловина" in n.lower()]
-        if filt:
-            left_rows.append((r, filt))
+        selected = []
+        for note in merged[r]:
+            low = note.lower()
+            if "каждое плечо" in low or "[l]" in low:
+                selected.append(note)
+        if selected:
+            left_rows.append((r, selected))
 
-    prev = split_row + 1
     for r, notes in left_rows:
-        if r > prev:
-            push_plain_range(table_rows, prev, r - 1)
-        table_rows.append((str(r), "; ".join(notes), section_tags(r)))
-        prev = r + 1
-    if prev <= rows_count:
-        push_plain_range(table_rows, prev, rows_count)
+        if r > left_prev:
+            push_plain(table_rows, left_prev, r - 1)
+        table_rows.append((str(r), "; ".join(clean_notes(notes)),
+                           section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
+        left_prev = r + 1
+    if left_prev <= rows_count:
+        push_plain(table_rows, left_prev, rows_count)
 
-    # ---------- 3) ПРАВОЕ ПЛЕЧО ----------
     table_rows.append((f"— ПРАВОЕ ПЛЕЧО — (вернитесь к ряду {split_row})", "", ""))
+    right_prev = split_row
     right_rows = []
     candidate_rows = [split_row] + [x for x in rows_sorted if x > split_row]
     for r in candidate_rows:
-        filt = [n for n in merged[r] if "правое плечо" in n.lower() or "каждое плечо" in n.lower() or "горловина" in n.lower()]
-        if r == split_row and any("разделение на плечи" in n.lower() for n in merged[r]):
-            filt.append("↳ переход к правому плечу")
-        if filt:
-            right_rows.append((r, filt))
+        row_notes = merged.get(r, [])
+        selected = []
+        for note in row_notes:
+            low = note.lower()
+            if "каждое плечо" in low или "[r]" in low:
+                selected.append(note)
+        if r == split_row and any("разделение на плечи" in n.lower() for n in row_notes):
+            selected.append("↳ переход к правому плечу")
+        if selected:
+            right_rows.append((r, selected))
 
-    prev = split_row
     for r, notes in right_rows:
-        if r > prev:
-            push_plain_range(table_rows, prev, r - 1)
-        table_rows.append((str(r), "; ".join(notes), section_tags(r)))
-        prev = r + 1
-    if prev <= rows_count:
-        push_plain_range(table_rows, prev, rows_count)
+        if r > right_prev:
+            push_plain(table_rows, right_prev, r - 1)
+        table_rows.append((str(r), "; ".join(clean_notes(notes)),
+                           section_tags(r, rows_to_armhole_end, neck_start_row, shoulder_start_row)))
+        right_prev = r + 1
+    if right_prev <= rows_count:
+        push_plain(table_rows, right_prev, rows_count)
 
-    # ---------- Рендер ----------
     df = pd.DataFrame(table_rows, columns=["Ряды", "Действия", "Сегмент"])
     st.dataframe(df, use_container_width=True, hide_index=True)
+
     if key:
         st.session_state[key] = table_rows
 
@@ -694,6 +718,8 @@ if st.button("🔄 Рассчитать"):
     # Пересчёт в петли/ряды
     # -----------------------------
     st_hip     = cm_to_st(hip_cm, density_st)
+    if st_hip % 2:
+        st_hip += 1
     st_chest   = cm_to_st(chest_cm, density_st)
     rows_total = cm_to_rows(length_cm, density_row)
     rows_armh  = cm_to_rows(armhole_depth_cm, density_row)
@@ -772,10 +798,6 @@ if st.button("🔄 Рассчитать"):
     elif delta_bottom < 0:
         actions_back += sym_decreases(-delta_bottom, 6, rows_bottom, rows_total, "бок")
 
-        st_hip = cm_to_st(hip_cm, density_st)
-    if st_hip % 2:  # всегда чётный набор
-        st_hip += 1
-
     # 2. Пройма
     delta_armh = st_shoulders - st_chest
     if delta_armh > 0:
@@ -785,14 +807,14 @@ if st.button("🔄 Рассчитать"):
 
     # 3. Горловина + плечи (вместе)
     actions_back += plan_neck_and_shoulders_split(
-    neck_st=neck_st,
-    neck_rows=neck_rows_back,
-    neck_start_row=neck_start_row_back,
-    st_shoulders=st_shoulders,
-    shoulder_start_row=shoulder_start_row,
-    rows_total=rows_total,
-    straight_percent=0.20
-)
+        neck_st=neck_st,
+        neck_rows=neck_rows_back,
+        neck_start_row=neck_start_row_back,
+        st_shoulders=st_shoulders,
+        shoulder_start_row=shoulder_start_row,
+        rows_total=rows_total,
+        straight_percent=0.20
+    )
 
     # 4. Слияние и коррекция
     actions_back = merge_actions(actions_back, rows_total)
@@ -820,6 +842,8 @@ if st.button("🔄 Рассчитать"):
 
     # пересчёт в петли/ряды
     st_hip     = cm_to_st(hip_cm, density_st)
+    if st_hip % 2:
+        st_hip += 1
     st_chest   = cm_to_st(chest_cm, density_st)
     rows_total = cm_to_rows(length_cm, density_row)
     rows_armh  = cm_to_rows(armhole_depth_cm, density_row)
