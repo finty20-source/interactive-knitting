@@ -443,7 +443,6 @@ def make_table_front_split(actions, rows_count, rows_to_armhole_end, neck_start_
     # Ряд разделения показываем всегда
     table_rows.append((str(split_row), "; ".join(merged[split_row]), section_tags(split_row)))
 
-    # Вспомогательные фильтры
     def left_notes(notes, row=None):
     out = []
     for n in notes:
@@ -454,16 +453,17 @@ def make_table_front_split(actions, rows_count, rows_to_armhole_end, neck_start_
             out.append(n.replace("(левое плечо)", "").strip())
     return out
 
-    def right_notes(notes, include_split=False):
-        out = []
-        for n in notes:
-            ln = n.lower()
-            if "правое плечо" in ln or "каждое плечо" in ln:
-                out.append(n)
-            # В правом блоке в первом ряду дублируем центральное закрытие для наглядности
-            if include_split and "разделение на плечи" in ln and n not in out:
-                out.append(n)
-        return out
+def right_notes(notes, row=None, include_split=False):
+    out = []
+    for n in notes:
+        ln = n.lower()
+        if "каждое плечо" in ln:
+            out.append(n.replace("(каждое плечо)", "").strip())
+        elif row is not None and row % 2 == 1:  # нечётный ряд → правое плечо
+            out.append(n.replace("(правое плечо)", "").strip())
+        if include_split and "разделение на плечи" in ln and n not in out:
+            out.append(n)
+    return out
 
     # ---------- 2) ЛЕВОЕ ПЛЕЧО ----------
     table_rows.append(("— ЛЕВОЕ ПЛЕЧО —", "", ""))
