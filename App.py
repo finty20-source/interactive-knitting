@@ -488,10 +488,22 @@ def right_notes(notes, row=None, include_split=False):
     right_rows = []
     # включаем split_row, чтобы показать центральное закрытие и возможный скос, если он совпал
     candidate_rows = [split_row] + [x for x in rows_sorted if x > split_row]
+    # внутри формирования right_rows
     for r in candidate_rows:
-        filt = right_notes(merged[r], row=r, include_split=(r == split_row))
+        filt = right_notes(merged[r], include_split=(r == split_row))
         if filt:
-            right_rows.append((r, filt))
+            # если это split_row и в нём есть скос плеча [R] → переносим на +2 ряда (чтобы остаться на чётных)
+            moved = []
+            stay  = []
+            for n in filt:
+                if "скос плеча [R]" in n and r == split_row:
+                    moved.append(n)
+                else:
+                stay.append(n)
+            if stay:
+                right_rows.append((r, stay))
+            for n in moved:
+                right_rows.append((r+2, [n]))  # перенос скоса на 2 ряда дальше
 
     prev = split_row
     for r, notes in right_rows:
