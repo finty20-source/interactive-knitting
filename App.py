@@ -477,15 +477,15 @@ if st.button("🔄 Рассчитать"):
         st_chest, st_shoulders, armhole_start_row, shoulder_start_row, rows_total
     )
 
-    # 3. Горловина + плечи (вместе, с разделением)
+    # 3. Горловина + скос плеча (единая логика с разделением плеч)
     actions += plan_neck_and_shoulders_split(
         neck_st=neck_st,
         neck_rows=neck_rows_front,
         neck_start_row=neck_start_row_front,
-        st_shoulders=st_shldr,
+        st_shoulders=2 * st_shldr,   # ширина обоих плеч!
         shoulder_start_row=shoulder_start_row,
         rows_total=rows_total,
-        straight_percent=0.20
+        straight_percent=0.20        # последние 20% рядов горловины прямо
     )
 
     # 4. Слияние и коррекция
