@@ -385,31 +385,82 @@ if st.button("🔄 Рассчитать"):
     neck_start_back  = rows_total - rows_neck_back + 1
     shoulder_start   = rows_total - rows_slope + 1
 
-    # 1) Низ → ширина у верха. Без проймы.
-    #   Целевая ширина вверху полотна = плечи + горловина (оба плеча + центр)
-    st_top = st_shoulders + st_neck
-    delta_bottom = st_top - st_hip
+    # 1) Низ → верхняя ширина (симметрично, допускаем >1 п. на сторону в ряду при нехватке рядов)
+# Целевая верхняя ширина = оба плеча + горловина
+st_top = (2 * st_shldr) + neck_st
+delta_bottom = st_top - st_hip  # + прибавки, - убавки
 
-    # Распределяем изменение ширины (симметрично) по чётным рядам,
-    # и НЕ делаем ничего в первых 5 рядах (как ты просила).
-    actions_base = []
-    if delta_bottom != 0:
-        start_change = max(6, 6)  # от 6-го ряда
-        end_change = max(6, rows_total - rows_slope)  # до начала плеч
-        even_rows = [r for r in range(start_change, end_change + 1) if r % 2 == 0]
-        per_side = abs(delta_bottom) // 2
-        steps = min(len(even_rows), per_side)
-        if steps > 0:
-            parts = split_int_sum(per_side, steps)
-            idxs = np.linspace(0, len(even_rows) - 1, num=steps, dtype=int)
-            chosen = [even_rows[i] for i in idxs]
-            for r, v in zip(chosen, parts):
-                if delta_bottom > 0:
-                    actions_base.append((r, f"+{v} п. бок (слева)"))
-                    actions_base.append((r, f"+{v} п. бок (справа)"))
-                else:
-                    actions_base.append((r, f"-{v} п. бок (слева)"))
-                    actions_base.append((r, f"-{v} п. бок (справа)"))
+actions_base = []
+if delta_bottom != 0:
+    # чётные ряды, не раньше 6-го и до начала плеча
+    start_change = 6
+    end_change = max(6, rows_total - rows_slope)  # чтобы скос шёл отдельно
+    even_rows = [r for r in range(start_change, end_change + 1) if r % 2 == 0]
+
+    if even_rows:
+        # максимально допустимое «за один ряд» на КАЖДУЮ сторону
+        max_per_side_per_row = 3  # при необходимости увеличь/уменьши
+
+        # доступная максимальная суммарная смена ширины (в петлях)
+        max_total_change = 2 * len(even_rows) * max_per_side_per_row  # ×2 — т.к. слева+справа
+
+        # зажимаем желаемую дельту в доступный диапазон
+        planned = int(delta_bottom)
+        planned = max(-max_total_change, min(max_total_change, planned))
+
+        # симметрия требует чётного planned; доводим к нулю
+        if planned % 2 != 0:
+            planned -= 1 if planned > 0 else -1
+
+        if planned != 0:
+            # сколько всего на ОДНУ сторону
+            per_side_total = abs(planned) // 2
+
+            # разложим на len(even_rows) «корзин» с верхним лимитом max_per_side_per_row
+            n = len(even_rows)
+            base = per_side_total // n
+            rem  = per_side_total % n
+
+            # если базовая > лимита — сначала по лимиту всем, остаток — ещё одним проходом
+            per_row = [0] * n
+            if base >= max_per_side_per_row:
+                # первый проход — всем по максимуму
+                per_row = [max_per_side_per_row] * n
+                leftover = per_side_total - n * max_per_side_per_row
+                # второй проход — пока не исчерпаем остаток
+                i = 0
+                while leftover > 0:
+                    take = min(max_per_side_per_row, leftover)
+                    per_row[i % n] += take
+                    leftover -= take
+                    i += 1
+            else:
+                # обычное равномерное распределение с «хвостами»
+                per_row = [base + (1 if i < rem else 0) for i in range(n)]
+                # на всякий случай не превышаем лимит
+                per_row = [min(x, max_per_side_per_row) for x in per_row]
+                # поправим, если чуть «срезали»
+                cut_loss = per_side_total - sum(per_row)
+                j = 0
+                while cut_loss > 0:
+                    if per_row[j % n] < max_per_side_per_row:
+                        per_row[j % n] += 1
+                        cut_loss -= 1
+                    j += 1
+
+            # теперь кладём действия
+            if planned > 0:
+                # ПРИБАВКИ
+                for r, v in zip(even_rows, per_row):
+                    if v > 0:
+                        actions_base.append((r, f"+{v} п. бок (слева)"))
+                        actions_base.append((r, f"+{v} п. бок (справа)"))
+            else:
+                # УБАВКИ
+                for r, v in zip(even_rows, per_row):
+                    if v > 0:
+                        actions_base.append((r, f"-{v} п. бок (слева)"))
+                        actions_base.append((r, f"-{v} п. бок (справа)"))
 
     # 2) Горловина (перед)
     actions_front = actions_base.copy()
